@@ -1,78 +1,147 @@
 
-# Behebung: Preise im Konfigurator werden nicht angezeigt
+# Konfigurator Umbau: Neue Struktur nach Vorgabe
 
-## Ursache des Problems
+## Übersicht der Änderungen
 
-Die Preise werden nicht angezeigt, weil **React Query die leeren Ergebnisse zwischengespeichert** hat. Die API-Anfragen wurden um **17:23:16Z** gestellt, aber die Daten wurden erst um **17:26:02Z** importiert. React Query zeigt nun die gecachten leeren Arrays an.
+Der Konfigurator wird gemäß der vorgegebenen Struktur umgebaut:
 
-**Sofortige Lösung:** Die Seite `/configurator` neu laden (Strg+F5 oder Cmd+Shift+R) um frische Daten abzurufen.
-
----
-
-## Geplante Verbesserungen
-
-### 1. Stale-Time und Cache-Einstellungen optimieren
-
-In `src/hooks/useConfiguratorItems.ts` werden kürzere Cache-Zeiten konfiguriert:
-
-```typescript
-return useQuery({
-  queryKey: ['configurator-items', category],
-  queryFn: async () => { ... },
-  staleTime: 1000 * 60 * 5, // 5 Minuten
-  refetchOnWindowFocus: true,
-});
-```
-
-### 2. Hinweis bei fehlenden Preisdaten
-
-Im ConfiguratorPage wird ein Hinweis angezeigt, wenn keine Produkte gefunden werden:
-
-```typescript
-// Prüfung ob Produkte vorhanden sind
-const hasProducts = lichtkuppelItems && lichtkuppelItems.length > 0;
-
-// Warnung anzeigen wenn keine Produkte
-{!hasProducts && !isLoading && (
-  <Alert variant="warning">
-    Keine Preisdaten gefunden. Bitte laden Sie die Seite neu.
-    <Button onClick={() => window.location.reload()}>Neu laden</Button>
-  </Alert>
-)}
-```
-
-### 3. Bessere Preisanzeige bei nicht gefundenen Produkten
-
-Anstatt €0,00 wird "Preis auf Anfrage" angezeigt, wenn kein passendes Produkt existiert:
-
-```typescript
-const formatPriceOrNA = (price: number, found: boolean) => {
-  if (!found) return "auf Anfrage";
-  return formatPrice(price);
-};
-```
+| Aktuell | Neu |
+|---------|-----|
+| Kombinierte Größenauswahl (80x80, 100x100...) | Separate Länge + Breite Auswahl |
+| Material: AC, HS, PC | Material: Acryl, Heatstop, Polycarbonat + Optik (klar/opal) |
+| 4 Lüfterrahmen-Optionen | 3 Optionen (festverglast, 230V, 24V) |
+| Kranz als Option ein/aus | Kranz immer dabei mit Höhenauswahl |
 
 ---
 
-## Betroffene Dateien
+## Neue Konfigurator-Struktur
+
+### 1. Maße [ULW] - Innenlichtweite
+
+**Länge** (Zeilen-Buttons):
+- 80 cm
+- 100 cm
+- 110 cm
+- 180 cm
+
+**Breite** (Zeilen-Buttons):
+- 180 cm
+
+Logik: Breite >= Länge (oder alle Kombinationen erlaubt)
+
+### 2. OBERSCHALE (Material & Optik)
+
+**Material** (Radio-Buttons):
+- Acryl (Standard)
+- Heatstop (wärmereflektierend)
+- Polycarbonat (schlagfest)
+
+**Optik** (Radio-Buttons):
+- klar (transparent)
+- opal (Milchglas)
+
+**Schale** (1-5):
+- 1-schalig
+- 2-schalig
+- 3-schalig
+- 4-schalig
+- 5-schalig
+
+### 3. AUFSATZKRANZ
+
+**Höhe** (Radio-Buttons):
+- 15 cm
+- 30 cm
+- 50 cm
+
+### 4. Lüfterrahmen (optional)
+
+**Varianten** (Radio-Buttons):
+- festverglast (nicht zu öffnen)
+- elektrisch öffenbar (230V Antrieb)
+- elektrisch öffenbar (24V RWA-Antrieb)
+
+---
+
+## Technische Änderungen
+
+### ConfigSelection Interface (aktualisiert)
+
+```typescript
+interface ConfigSelection {
+  // Maße - separat statt kombiniert
+  laenge: number;      // 80, 100, 110, 180
+  breite: number;      // 80, 100, 110, 180
+  
+  // Oberschale
+  material: 'acryl' | 'heatstop' | 'polycarbonat';
+  optik: 'klar' | 'opal';
+  shells: 1 | 2 | 3 | 4 | 5;
+  
+  // Aufsatzkranz
+  kranzHeight: 15 | 30 | 50;
+  
+  // Lüfterrahmen
+  luefterrahmen: 'festverglast' | '230v' | '24v';
+  
+  // Menge
+  quantity: number;
+}
+```
+
+### Neue Konstanten
+
+```typescript
+const AVAILABLE_LAENGEN = [80, 100, 110, 180];
+const AVAILABLE_BREITEN = [180]; // Aktuell nur 180 verfügbar
+const SHELL_OPTIONS = [1, 2, 3, 4, 5];
+const KRANZ_HEIGHTS = [15, 30, 50];
+```
+
+### UI-Layout
+
+```text
++------------------------------------------+
+|  MASSE [ULW]                             |
+|  Länge:  [80] [100] [110] [180]          |
+|  Breite: [180]                           |
++------------------------------------------+
+|  OBERSCHALE (Material & Optik)           |
+|  Material: [Acryl] [Heatstop] [PC]       |
+|  Optik:    [klar] [opal]                 |
+|  Schale:   [1] [2] [3] [4] [5]           |
++------------------------------------------+
+|  AUFSATZKRANZ                            |
+|  Höhe:     [15cm] [30cm] [50cm]          |
++------------------------------------------+
+|  LÜFTERRAHMEN (optional)                 |
+|  [festverglast] [230V] [24V RWA]         |
++------------------------------------------+
+```
+
+---
+
+## Dateien die geändert werden
 
 | Datei | Änderung |
 |-------|----------|
-| `src/hooks/useConfiguratorItems.ts` | Cache-Einstellungen, staleTime, refetchOnWindowFocus |
-| `src/components/configurator/ConfiguratorPage.tsx` | Warnung bei leeren Daten, Preisanzeige-Logik |
+| `src/components/configurator/ConfiguratorPage.tsx` | Kompletter Umbau der UI und Logik |
 
 ---
 
-## Technische Details
+## Entfernte Features (vereinfacht)
 
-### Aktuelle Datenlage in der Datenbank
+- Form-Auswahl (rund/rechteckig) - nur rechteckig
+- Kranz ein/aus Toggle - immer dabei
+- Wandstärke-Auswahl - vereinfacht
+- Durchsturzsicherung - entfernt (kann später hinzugefügt werden)
+- Vormontage-Option - entfernt
 
-| Kategorie | Anzahl Artikel |
-|-----------|----------------|
-| lichtkuppel | 25 |
-| aufsatzkranz | 13 |
-| luefterrahmen | 8 |
-| durchsturzsicherung | 7 |
-| zubehoer | 9 |
+## Datenbank-Mapping
 
-Die Daten sind korrekt in der Datenbank vorhanden. Nach Implementierung der Fixes und einem Neuladen der Seite werden alle Preise korrekt angezeigt.
+Die vorhandenen Daten in der Datenbank verwenden:
+- `width_cm` und `length_cm` für Maße
+- `material` mit Werten 'AC', 'HS', 'PC' (wird gemappt zu acryl/heatstop/polycarbonat)
+- `shells` für Schalenanzahl
+
+Die Preisabfrage wird entsprechend angepasst, um die neuen separaten Länge/Breite-Felder zu verwenden.
