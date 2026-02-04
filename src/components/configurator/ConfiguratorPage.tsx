@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Info, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ShoppingCart, Info, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import { formatPrice } from '@/lib/order-utils';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
@@ -146,9 +147,21 @@ export function ConfiguratorPage() {
       vormontage: vormontagePrice,
       unitTotal,
       total,
-      hasItems: lichtkuppelPrice > 0,
+      lichtkuppelFound: !!lkItem,
+      kranzFound: !!kranzItem,
+      luefterFound: !!luefterItem,
+      durchsturzFound: !!durchsturzItem,
     };
   }, [selection, lichtkuppelItems, kranzItems, luefterItems, durchsturzItems]);
+
+  // Helper function for price display
+  const formatPriceOrNA = (price: number, found: boolean) => {
+    if (!found && price === 0) return 'auf Anfrage';
+    return formatPrice(price);
+  };
+
+  // Check if we have any products loaded
+  const hasProducts = lichtkuppelItems && lichtkuppelItems.length > 0;
 
   const getUValue = () => {
     const uValues: Record<number, number> = { 1: 5.0, 2: 2.7, 3: 1.7, 4: 1.3, 5: 1.0 };
@@ -196,6 +209,29 @@ export function ConfiguratorPage() {
             : 'Configure your custom skylight with matching accessories'}
         </p>
       </div>
+
+      {/* Warning if no products found */}
+      {!hasProducts && !isLoading && (
+        <Alert className="mb-6 border-amber-500 bg-amber-50 dark:bg-amber-950/20">
+          <AlertCircle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="flex items-center justify-between">
+            <span className="text-amber-800 dark:text-amber-200">
+              {language === 'de'
+                ? 'Keine Preisdaten gefunden. Bitte laden Sie die Seite neu.'
+                : 'No pricing data found. Please reload the page.'}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.location.reload()}
+              className="ml-4 border-amber-500 text-amber-700 hover:bg-amber-100"
+            >
+              <RefreshCw className="h-4 w-4 mr-1" />
+              {language === 'de' ? 'Neu laden' : 'Reload'}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Configuration Options */}
@@ -600,7 +636,7 @@ export function ConfiguratorPage() {
                         : 'excl. VAT, plus shipping'}
                     </p>
 
-                    {!prices.hasItems && (
+                    {!prices.lichtkuppelFound && (
                       <div className="flex items-start gap-2 p-3 bg-muted rounded-lg text-sm">
                         <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
                         <span>
@@ -615,7 +651,7 @@ export function ConfiguratorPage() {
                       className="w-full"
                       size="lg"
                       onClick={handleAddToCart}
-                      disabled={!prices.hasItems}
+                      disabled={!prices.lichtkuppelFound}
                     >
                       <ShoppingCart className="mr-2 h-4 w-4" />
                       {language === 'de' ? 'In den Warenkorb' : 'Add to Cart'}

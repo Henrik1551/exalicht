@@ -46,6 +46,8 @@ export function useConfiguratorItems(category?: ConfiguratorCategory) {
 
       return (data || []) as ConfiguratorItem[];
     },
+    staleTime: 1000 * 60 * 5, // 5 Minuten - Cache wird nach 5 Minuten als veraltet betrachtet
+    refetchOnWindowFocus: true, // Daten werden beim Fokuswechsel aktualisiert
   });
 }
 
