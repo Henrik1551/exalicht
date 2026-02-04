@@ -47,6 +47,167 @@ export type Database = {
         }
         Relationships: []
       }
+      configurator_items: {
+        Row: {
+          article_number: string
+          category: Database["public"]["Enums"]["configurator_category"]
+          created_at: string
+          description: string | null
+          diameter_cm: number | null
+          form: string | null
+          height_cm: number | null
+          id: string
+          is_active: boolean | null
+          length_cm: number | null
+          material: string | null
+          name: string
+          price_unit: number | null
+          purchase_price: number | null
+          sale_price: number
+          shells: number | null
+          surface: string | null
+          u_value: number | null
+          updated_at: string
+          wall_thickness_mm: number | null
+          width_cm: number | null
+        }
+        Insert: {
+          article_number: string
+          category: Database["public"]["Enums"]["configurator_category"]
+          created_at?: string
+          description?: string | null
+          diameter_cm?: number | null
+          form?: string | null
+          height_cm?: number | null
+          id?: string
+          is_active?: boolean | null
+          length_cm?: number | null
+          material?: string | null
+          name: string
+          price_unit?: number | null
+          purchase_price?: number | null
+          sale_price: number
+          shells?: number | null
+          surface?: string | null
+          u_value?: number | null
+          updated_at?: string
+          wall_thickness_mm?: number | null
+          width_cm?: number | null
+        }
+        Update: {
+          article_number?: string
+          category?: Database["public"]["Enums"]["configurator_category"]
+          created_at?: string
+          description?: string | null
+          diameter_cm?: number | null
+          form?: string | null
+          height_cm?: number | null
+          id?: string
+          is_active?: boolean | null
+          length_cm?: number | null
+          material?: string | null
+          name?: string
+          price_unit?: number | null
+          purchase_price?: number | null
+          sale_price?: number
+          shells?: number | null
+          surface?: string | null
+          u_value?: number | null
+          updated_at?: string
+          wall_thickness_mm?: number | null
+          width_cm?: number | null
+        }
+        Relationships: []
+      }
+      configurator_quotes: {
+        Row: {
+          aufsatzkranz_item_id: string | null
+          aufsatzkranz_price: number | null
+          created_at: string
+          durchsturzsicherung_item_id: string | null
+          durchsturzsicherung_price: number | null
+          form: string
+          id: string
+          lichtkuppel_item_id: string | null
+          lichtkuppel_price: number | null
+          luefterrahmen_item_id: string | null
+          luefterrahmen_price: number | null
+          quantity: number | null
+          status: string | null
+          subtotal: number | null
+          updated_at: string
+          user_id: string | null
+          vormontage: boolean | null
+        }
+        Insert: {
+          aufsatzkranz_item_id?: string | null
+          aufsatzkranz_price?: number | null
+          created_at?: string
+          durchsturzsicherung_item_id?: string | null
+          durchsturzsicherung_price?: number | null
+          form: string
+          id?: string
+          lichtkuppel_item_id?: string | null
+          lichtkuppel_price?: number | null
+          luefterrahmen_item_id?: string | null
+          luefterrahmen_price?: number | null
+          quantity?: number | null
+          status?: string | null
+          subtotal?: number | null
+          updated_at?: string
+          user_id?: string | null
+          vormontage?: boolean | null
+        }
+        Update: {
+          aufsatzkranz_item_id?: string | null
+          aufsatzkranz_price?: number | null
+          created_at?: string
+          durchsturzsicherung_item_id?: string | null
+          durchsturzsicherung_price?: number | null
+          form?: string
+          id?: string
+          lichtkuppel_item_id?: string | null
+          lichtkuppel_price?: number | null
+          luefterrahmen_item_id?: string | null
+          luefterrahmen_price?: number | null
+          quantity?: number | null
+          status?: string | null
+          subtotal?: number | null
+          updated_at?: string
+          user_id?: string | null
+          vormontage?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "configurator_quotes_aufsatzkranz_item_id_fkey"
+            columns: ["aufsatzkranz_item_id"]
+            isOneToOne: false
+            referencedRelation: "configurator_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "configurator_quotes_durchsturzsicherung_item_id_fkey"
+            columns: ["durchsturzsicherung_item_id"]
+            isOneToOne: false
+            referencedRelation: "configurator_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "configurator_quotes_lichtkuppel_item_id_fkey"
+            columns: ["lichtkuppel_item_id"]
+            isOneToOne: false
+            referencedRelation: "configurator_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "configurator_quotes_luefterrahmen_item_id_fkey"
+            columns: ["luefterrahmen_item_id"]
+            isOneToOne: false
+            referencedRelation: "configurator_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
@@ -299,6 +460,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      configurator_category:
+        | "lichtkuppel"
+        | "aufsatzkranz"
+        | "luefterrahmen"
+        | "durchsturzsicherung"
+        | "zubehoer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -427,6 +594,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      configurator_category: [
+        "lichtkuppel",
+        "aufsatzkranz",
+        "luefterrahmen",
+        "durchsturzsicherung",
+        "zubehoer",
+      ],
     },
   },
 } as const
