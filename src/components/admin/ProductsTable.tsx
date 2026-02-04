@@ -33,6 +33,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatPrice } from '@/lib/order-utils';
 import { Loader2, Search } from 'lucide-react';
 import { toast } from 'sonner';
+import { ProductEditDialog } from './ProductEditDialog';
 
 interface Product {
   id: string;
@@ -42,6 +43,11 @@ interface Product {
   in_stock: boolean | null;
   category: string | null;
   images: string[] | null;
+  short_description?: string | null;
+  description?: string | null;
+  weight_kg?: number | null;
+  gtin?: string | null;
+  is_featured?: boolean | null;
 }
 
 export function ProductsTable() {
@@ -52,12 +58,14 @@ export function ProductsTable() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<Product | null>(null);
 
   const fetchProducts = async () => {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, sku, price, in_stock, category, images')
+        .select('id, name, sku, price, in_stock, category, images, short_description, description, weight_kg, gtin, is_featured')
         .order('name');
 
       if (error) throw error;
@@ -67,6 +75,11 @@ export function ProductsTable() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditClick = (product: Product) => {
+    setProductToEdit(product);
+    setEditDialogOpen(true);
   };
 
   useEffect(() => {
@@ -219,7 +232,7 @@ export function ProductsTable() {
                             {language === 'de' ? 'Ansehen' : 'View'}
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditClick(product)}>
                           <Edit className="mr-2 h-4 w-4" />
                           {language === 'de' ? 'Bearbeiten' : 'Edit'}
                         </DropdownMenuItem>
@@ -270,6 +283,14 @@ export function ProductsTable() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Dialog */}
+      <ProductEditDialog
+        product={productToEdit}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onProductUpdated={fetchProducts}
+      />
     </div>
   );
 }
