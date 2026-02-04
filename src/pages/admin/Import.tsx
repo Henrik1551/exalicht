@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { Layout } from '@/components/layout/Layout';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -114,8 +114,8 @@ const AdminImport = () => {
   };
 
   return (
-    <Layout>
-      <div className="container py-10">
+    <AdminLayout>
+      <div className="max-w-4xl">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold text-foreground mb-2">
             Produkt-Import
@@ -302,7 +302,7 @@ const AdminImport = () => {
           )}
         </div>
       </div>
-    </Layout>
+    </AdminLayout>
   );
 };
 
