@@ -1,54 +1,134 @@
 
-# Fehlende Preisdaten für 80x80 und 110x110 Lichtkuppeln
 
-## Aktuelle Datenlage
+# 3D Lichtkuppel-Visualisierung für Konfigurator
 
-| Größe | Lichtkuppeln | Aufsatzkränze | Status |
-|-------|--------------|---------------|--------|
-| 80x80 | 0 | 0 | **Fehlt komplett** |
-| 100x100 | 15 | 7 | ✅ Vorhanden |
-| 110x110 | 0 | 0 | **Fehlt komplett** |
-| 120x120 | 5 | 3 | Vorhanden (nicht im Konfigurator) |
-| 150x150 | 5 | 3 | Vorhanden (nicht im Konfigurator) |
+## Übersicht
+
+Implementierung einer interaktiven 3D-Vorschau der Lichtkuppel, die sich in Echtzeit an die Konfiguration anpasst. Die 3D-Ansicht wird oben auf der Seite angezeigt und reagiert auf alle Konfigurationsänderungen.
 
 ---
 
-## Lösungsoptionen
+## Technische Umsetzung
 
-### Option A: Manuelle Dateneingabe via SQL
+### Neue Dependencies
 
-Da keine Markdown-Exportdateien mit 80x80 und 110x110 Daten vorliegen, können wir die Preisdaten direkt in die Datenbank einfügen. Dafür benötigen wir die Preisliste.
+```json
+{
+  "@react-three/fiber": "^8.18.0",
+  "@react-three/drei": "^9.122.0",
+  "three": "^0.170.0"
+}
+```
 
-**Benötigte Informationen:**
-- Preise für 80x80 cm Lichtkuppeln (AC/HS/PC, 1-5 schalig)
-- Preise für 110x110 cm Lichtkuppeln (AC/HS/PC, 1-5 schalig)
-- Preise für entsprechende Aufsatzkränze (15/30/50 cm Höhe)
-
-### Option B: Preise aus vorhandenen Daten interpolieren
-
-Basierend auf den vorhandenen Preisen für 100x100, 120x120 und 150x150 können wir die fehlenden Größen schätzen:
-
-**Beispielrechnung (100x100 AC 1-schalig = 141,90€):**
-- 80x80 wäre kleiner → geschätzt ~90-100€
-- 110x110 wäre größer → geschätzt ~160-180€
-
-### Option C: Markdown-Dateien mit fehlenden Größen importieren
-
-Falls Preislisten-Dateien für 80x80 und 110x110 existieren, können diese über die Admin-Seite `/admin/configurator-import` hochgeladen werden.
+**Hinweis**: Version 8 für fiber und Version 9 für drei sind erforderlich für React 18 Kompatibilität.
 
 ---
 
-## Empfohlene Vorgehensweise
+## 3D-Modell Struktur
 
-1. **Prüfen Sie, ob Preislisten-Dateien für 80x80 und 110x110 verfügbar sind**
-2. Falls ja: Import über `/admin/configurator-import`
-3. Falls nein: Teilen Sie die Preise mit mir, und ich füge sie direkt in die Datenbank ein
+Die Lichtkuppel besteht aus drei Hauptkomponenten:
+
+```text
+┌─────────────────────────────────────────┐
+│           LICHTKUPPEL (Dome)            │
+│    ┌─────────────────────────────┐      │
+│    │    Gewölbte Oberschale      │      │  ← Transparent/Opal
+│    │    (1-5 Schichten)          │      │
+│    └─────────────────────────────┘      │
+├─────────────────────────────────────────┤
+│         LÜFTERRAHMEN (optional)         │  ← Metallrahmen
+├─────────────────────────────────────────┤
+│           AUFSATZKRANZ                  │
+│    ┌─────────────────────────────┐      │
+│    │    Weißer PVC-Rahmen        │      │  ← Variable Höhe
+│    │    (15/30/50 cm)            │      │
+│    └─────────────────────────────┘      │
+└─────────────────────────────────────────┘
+```
 
 ---
 
-## Nächste Schritte
+## Neue Komponenten
 
-Bitte teilen Sie mir mit:
-- Haben Sie Markdown-Dateien mit den Preisen für 80x80 und 110x110?
-- Oder sollen die Preise manuell eingegeben werden? Falls ja, bitte die Preisliste bereitstellen.
-- Sollen wir die Preise basierend auf den vorhandenen Daten interpolieren?
+### 1. SkylightModel3D.tsx
+Hauptkomponente für das 3D-Modell mit:
+- Dome (gewölbte Kuppel mit Materialtransparenz)
+- Shells (1-5 sichtbare Schichten)
+- Aufsatzkranz (weißer Rahmen, variable Höhe)
+- Lüfterrahmen (optional, Metalloptik)
+
+### 2. Skylight3DViewer.tsx
+Canvas-Wrapper mit:
+- OrbitControls für Rotation/Zoom
+- Beleuchtung (Ambient + Directional)
+- Responsive Größenanpassung
+- Loading-State
+
+---
+
+## Material-Mapping für 3D
+
+| Material | Farbe | Transparenz |
+|----------|-------|-------------|
+| Acryl klar | Hellblau | 90% transparent |
+| Acryl opal | Weiß | 60% transparent |
+| Heatstop klar | Goldton | 85% transparent |
+| Heatstop opal | Gold-weiß | 55% transparent |
+| Polycarbonat klar | Grau-blau | 80% transparent |
+| Polycarbonat opal | Grau-weiß | 50% transparent |
+
+---
+
+## UI-Layout Änderung
+
+```text
++------------------------------------------+
+|  HEADER                                  |
++------------------------------------------+
+|                                          |
+|     ┌────────────────────────────┐       |
+|     │                            │       |
+|     │      3D VORSCHAU           │       |
+|     │    (Interaktiv drehbar)    │       |
+|     │                            │       |
+|     └────────────────────────────┘       |
+|                                          |
++------------------------------------------+
+|  KONFIGURATOR (bestehendes Layout)       |
+|  - Maße                                  |
+|  - Material & Optik                      |
+|  - Aufsatzkranz                          |
+|  - Lüfterrahmen                          |
++------------------------------------------+
+```
+
+---
+
+## Dateien
+
+| Datei | Aktion |
+|-------|--------|
+| `src/components/configurator/SkylightModel3D.tsx` | **Neu** - 3D Modell |
+| `src/components/configurator/Skylight3DViewer.tsx` | **Neu** - Canvas Wrapper |
+| `src/components/configurator/ConfiguratorPage.tsx` | **Ändern** - 3D Viewer einbinden |
+| `package.json` | **Ändern** - 3D Dependencies |
+
+---
+
+## Technische Details
+
+### Dome-Geometrie
+- Verwendung von `SphereGeometry` mit oberer Hälfte für die gewölbte Form
+- Skalierung basierend auf `groesse` (80-180 cm)
+- Mehrere geschachtelte Sphären für Multi-Shell-Darstellung
+
+### Interaktivität
+- OrbitControls: Drehen, Zoomen, Schwenken
+- Auto-Rotation (optional, abschaltbar)
+- Smooth camera transitions bei Konfigurationsänderungen
+
+### Performance
+- Suspense für Lazy Loading
+- Optimierte Geometrien
+- Canvas nur rendern wenn sichtbar
+
