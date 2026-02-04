@@ -36,6 +36,7 @@ interface ProductEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onProductUpdated: () => void;
+  mode?: 'edit' | 'create';
 }
 
 export function ProductEditDialog({
@@ -43,6 +44,7 @@ export function ProductEditDialog({
   open,
   onOpenChange,
   onProductUpdated,
+  mode = 'edit',
 }: ProductEditDialogProps) {
   const { language } = useLanguage();
   const [saving, setSaving] = useState(false);
@@ -60,8 +62,10 @@ export function ProductEditDialog({
     is_featured: false,
   });
 
+  const isCreateMode = mode === 'create';
+
   useEffect(() => {
-    if (product) {
+    if (product && mode === 'edit') {
       setFormData({
         name: product.name || '',
         sku: product.sku || '',
@@ -75,46 +79,76 @@ export function ProductEditDialog({
         in_stock: product.in_stock ?? true,
         is_featured: product.is_featured ?? false,
       });
+    } else if (mode === 'create') {
+      // Reset form for create mode
+      setFormData({
+        name: '',
+        sku: '',
+        price: '',
+        category: '',
+        short_description: '',
+        description: '',
+        weight_kg: '',
+        gtin: '',
+        stock_quantity: '',
+        in_stock: true,
+        is_featured: false,
+      });
     }
-  }, [product]);
+  }, [product, mode, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!product) return;
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('products')
-        .update({
-          name: formData.name,
-          sku: formData.sku || null,
-          price: formData.price ? parseFloat(formData.price) : null,
-          category: formData.category || null,
-          short_description: formData.short_description || null,
-          description: formData.description || null,
-          weight_kg: formData.weight_kg ? parseFloat(formData.weight_kg) : null,
-          gtin: formData.gtin || null,
-          stock_quantity: formData.stock_quantity ? parseInt(formData.stock_quantity, 10) : null,
-          in_stock: formData.in_stock,
-          is_featured: formData.is_featured,
-        })
-        .eq('id', product.id);
+      const productData = {
+        name: formData.name,
+        sku: formData.sku || null,
+        price: formData.price ? parseFloat(formData.price) : null,
+        category: formData.category || null,
+        short_description: formData.short_description || null,
+        description: formData.description || null,
+        weight_kg: formData.weight_kg ? parseFloat(formData.weight_kg) : null,
+        gtin: formData.gtin || null,
+        stock_quantity: formData.stock_quantity ? parseInt(formData.stock_quantity, 10) : null,
+        in_stock: formData.in_stock,
+        is_featured: formData.is_featured,
+      };
 
-      if (error) throw error;
+      if (isCreateMode) {
+        const { error } = await supabase.from('products').insert(productData);
+        if (error) throw error;
+        toast.success(
+          language === 'de'
+            ? 'Produkt erfolgreich erstellt'
+            : 'Product created successfully'
+        );
+      } else {
+        if (!product) return;
+        const { error } = await supabase
+          .from('products')
+          .update(productData)
+          .eq('id', product.id);
+        if (error) throw error;
+        toast.success(
+          language === 'de'
+            ? 'Produkt erfolgreich aktualisiert'
+            : 'Product updated successfully'
+        );
+      }
 
-      toast.success(
-        language === 'de'
-          ? 'Produkt erfolgreich aktualisiert'
-          : 'Product updated successfully'
-      );
       onProductUpdated();
       onOpenChange(false);
     } catch (error) {
-      console.error('Error updating product:', error);
+      console.error('Error saving product:', error);
       toast.error(
         language === 'de'
-          ? 'Fehler beim Aktualisieren des Produkts'
+          ? isCreateMode
+            ? 'Fehler beim Erstellen des Produkts'
+            : 'Fehler beim Aktualisieren des Produkts'
+          : isCreateMode
+          ? 'Failed to create product'
           : 'Failed to update product'
       );
     } finally {
@@ -127,7 +161,13 @@ export function ProductEditDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {language === 'de' ? 'Produkt bearbeiten' : 'Edit Product'}
+            {isCreateMode
+              ? language === 'de'
+                ? 'Neues Produkt erstellen'
+                : 'Create New Product'
+              : language === 'de'
+              ? 'Produkt bearbeiten'
+              : 'Edit Product'}
           </DialogTitle>
         </DialogHeader>
 

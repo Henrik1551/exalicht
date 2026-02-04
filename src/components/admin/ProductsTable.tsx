@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Edit, MoreHorizontal, Trash2, Eye } from 'lucide-react';
+import { Edit, MoreHorizontal, Trash2, Eye, Plus } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -61,6 +61,7 @@ export function ProductsTable() {
   const [deleting, setDeleting] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const fetchProducts = async () => {
     try {
@@ -139,8 +140,8 @@ export function ProductsTable() {
 
   return (
     <div className="space-y-4">
-      {/* Search */}
-      <div className="flex items-center gap-4">
+      {/* Search & Create Button */}
+      <div className="flex items-center justify-between gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -150,6 +151,10 @@ export function ProductsTable() {
             className="pl-9"
           />
         </div>
+        <Button onClick={() => setCreateDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          {language === 'de' ? 'Neues Produkt' : 'New Product'}
+        </Button>
       </div>
 
       {/* Table */}
@@ -297,6 +302,16 @@ export function ProductsTable() {
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         onProductUpdated={fetchProducts}
+        mode="edit"
+      />
+
+      {/* Create Dialog */}
+      <ProductEditDialog
+        product={null}
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onProductUpdated={fetchProducts}
+        mode="create"
       />
     </div>
   );
