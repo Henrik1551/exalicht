@@ -89,7 +89,17 @@ export function Footer() {
               © {currentYear} Lichtkuppel-direkt. {t('footer.rights')}.
             </p>
             <div className="flex items-center gap-4">
-              <span className="text-xs text-muted-foreground">Made with ❤️ in Germany</span>
+              <span className="text-xs text-muted-foreground">
+                Made with ❤️ by{' '}
+                <a 
+                  href="https://webexistenz.de" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="hover:text-primary transition-colors"
+                >
+                  WebExistenz.de
+                </a>
+              </span>
             </div>
           </div>
         </div>
