@@ -1,14 +1,23 @@
-import { filterCategories } from '@/lib/products-data';
+import { filterCategories as defaultFilterCategories } from '@/lib/products-data';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
+
+interface FilterCategory {
+  id: string;
+  name: string;
+  nameEn: string;
+  count: number;
+}
 
 interface ProductFiltersProps {
   selectedCategory: string;
   onCategoryChange: (category: string) => void;
+  categories?: FilterCategory[];
 }
 
-export function ProductFilters({ selectedCategory, onCategoryChange }: ProductFiltersProps) {
+export function ProductFilters({ selectedCategory, onCategoryChange, categories }: ProductFiltersProps) {
   const { language } = useLanguage();
+  const filterCategories = categories || defaultFilterCategories;
 
   return (
     <div className="bg-card border border-border rounded-xl p-6 sticky top-20">

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Filter, Grid3X3, LayoutList } from 'lucide-react';
+import { Filter, Grid3X3, LayoutList, Loader2 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { CategoryCard } from '@/components/products/CategoryCard';
 import { ProductCard } from '@/components/products/ProductCard';
@@ -8,9 +8,27 @@ import { ProductFilters } from '@/components/products/ProductFilters';
 import { ProductSort } from '@/components/products/ProductSort';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { categories, products, filterCategories } from '@/lib/products-data';
+import { useProducts, useCategories, useProductCount, Product } from '@/hooks/useProducts';
+import { categories as staticCategories, products as mockProducts, filterCategories as staticFilterCategories } from '@/lib/products-data';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
+
+// Adapter to convert database product to UI product format
+const adaptProductForUI = (dbProduct: Product) => ({
+  id: dbProduct.id,
+  name: dbProduct.name,
+  description: dbProduct.short_description || dbProduct.description || '',
+  category: dbProduct.category || '',
+  subcategory: undefined,
+  shape: 'rectangular' as const,
+  minPrice: dbProduct.price || 0,
+  maxPrice: undefined,
+  image: dbProduct.images?.[0] || undefined,
+  features: [],
+  inStock: dbProduct.in_stock,
+  isNew: false,
+  isBestseller: dbProduct.is_featured,
+});
 
 const Products = () => {
   const { language } = useLanguage();
@@ -23,6 +41,42 @@ const Products = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
+  // Fetch products from database
+  const { data: dbProducts, isLoading: productsLoading } = useProducts({
+    category: selectedCategory,
+    sortBy: sortBy,
+  });
+
+  // Fetch categories from database
+  const { data: dbCategories } = useCategories();
+
+  // Fetch total product count
+  const { data: totalCount } = useProductCount();
+
+  // Use database products if available, otherwise fall back to mock data
+  const hasDbProducts = dbProducts && dbProducts.length > 0;
+  const products = hasDbProducts 
+    ? dbProducts.map(adaptProductForUI)
+    : mockProducts;
+
+  // Build filter categories from database or use static ones
+  const filterCategories = useMemo(() => {
+    if (dbCategories && dbCategories.length > 0) {
+      const allCount = totalCount || 0;
+      const cats = [
+        { id: 'all', name: 'Alle', nameEn: 'All', count: allCount },
+        ...dbCategories.map(cat => ({
+          id: cat.slug,
+          name: cat.name,
+          nameEn: cat.name_en || cat.name,
+          count: cat.product_count,
+        })),
+      ];
+      return cats;
+    }
+    return staticFilterCategories;
+  }, [dbCategories, totalCount]);
+
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
     if (category === 'all') {
@@ -33,8 +87,14 @@ const Products = () => {
     setSearchParams(searchParams);
   };
 
-  // Filter and sort products
+  // Filter and sort products (for mock data fallback)
   const filteredProducts = useMemo(() => {
+    // If using database products, they're already filtered/sorted by the query
+    if (hasDbProducts) {
+      return products;
+    }
+
+    // Fallback: filter mock data locally
     let result = [...products];
     
     // Filter by category
@@ -64,9 +124,9 @@ const Products = () => {
     }
     
     return result;
-  }, [selectedCategory, sortBy]);
+  }, [products, selectedCategory, sortBy, hasDbProducts]);
 
-  const totalProducts = filterCategories.find(c => c.id === selectedCategory)?.count || products.length;
+  const totalProducts = totalCount || filterCategories.find(c => c.id === selectedCategory)?.count || products.length;
 
   return (
     <Layout>
@@ -99,7 +159,7 @@ const Products = () => {
           </p>
           
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {categories.map((category) => (
+            {staticCategories.map((category) => (
               <CategoryCard key={category.id} category={category} />
             ))}
           </div>
@@ -115,6 +175,7 @@ const Products = () => {
               <ProductFilters 
                 selectedCategory={selectedCategory}
                 onCategoryChange={handleCategoryChange}
+                categories={filterCategories}
               />
             </aside>
 
@@ -138,6 +199,7 @@ const Products = () => {
                           handleCategoryChange(cat);
                           setMobileFiltersOpen(false);
                         }}
+                        categories={filterCategories}
                       />
                     </div>
                   </SheetContent>
@@ -176,8 +238,15 @@ const Products = () => {
                 currentRange={{ start: 1, end: Math.min(12, filteredProducts.length) }}
               />
 
+              {/* Loading State */}
+              {productsLoading && (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              )}
+
               {/* Product Grid */}
-              {filteredProducts.length > 0 ? (
+              {!productsLoading && filteredProducts.length > 0 ? (
                 <div className={cn(
                   "grid gap-6",
                   viewMode === 'grid' 
@@ -188,7 +257,7 @@ const Products = () => {
                     <ProductCard key={product.id} product={product} />
                   ))}
                 </div>
-              ) : (
+              ) : !productsLoading ? (
                 <div className="text-center py-16">
                   <p className="text-muted-foreground">
                     {language === 'de' 
@@ -197,26 +266,28 @@ const Products = () => {
                     }
                   </p>
                 </div>
-              )}
+              ) : null}
 
               {/* Pagination placeholder */}
-              <div className="mt-10 flex justify-center">
-                <div className="flex gap-2">
-                  {[1, 2, 3, '...', 8].map((page, idx) => (
-                    <button
-                      key={idx}
-                      className={cn(
-                        "w-10 h-10 rounded-lg border border-border flex items-center justify-center text-sm font-medium transition-colors",
-                        page === 1 
-                          ? "bg-primary text-primary-foreground border-primary" 
-                          : "hover:bg-muted text-foreground"
-                      )}
-                    >
-                      {page}
-                    </button>
-                  ))}
+              {filteredProducts.length > 0 && (
+                <div className="mt-10 flex justify-center">
+                  <div className="flex gap-2">
+                    {[1, 2, 3, '...', 8].map((page, idx) => (
+                      <button
+                        key={idx}
+                        className={cn(
+                          "w-10 h-10 rounded-lg border border-border flex items-center justify-center text-sm font-medium transition-colors",
+                          page === 1 
+                            ? "bg-primary text-primary-foreground border-primary" 
+                            : "hover:bg-muted text-foreground"
+                        )}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

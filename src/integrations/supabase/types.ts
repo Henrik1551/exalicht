@@ -14,7 +14,110 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      categories: {
+        Row: {
+          created_at: string
+          id: string
+          image: string | null
+          name: string
+          name_en: string | null
+          parent_slug: string | null
+          product_count: number | null
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image?: string | null
+          name: string
+          name_en?: string | null
+          parent_slug?: string | null
+          product_count?: number | null
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image?: string | null
+          name?: string
+          name_en?: string | null
+          parent_slug?: string | null
+          product_count?: number | null
+          slug?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          category: string | null
+          category_path: string | null
+          created_at: string
+          description: string | null
+          gtin: string | null
+          id: string
+          images: string[] | null
+          in_stock: boolean | null
+          is_featured: boolean | null
+          name: string
+          parent_id: string | null
+          price: number | null
+          product_type: string | null
+          short_description: string | null
+          sku: string | null
+          updated_at: string
+          weight_kg: number | null
+          woo_id: number | null
+        }
+        Insert: {
+          category?: string | null
+          category_path?: string | null
+          created_at?: string
+          description?: string | null
+          gtin?: string | null
+          id?: string
+          images?: string[] | null
+          in_stock?: boolean | null
+          is_featured?: boolean | null
+          name: string
+          parent_id?: string | null
+          price?: number | null
+          product_type?: string | null
+          short_description?: string | null
+          sku?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          woo_id?: number | null
+        }
+        Update: {
+          category?: string | null
+          category_path?: string | null
+          created_at?: string
+          description?: string | null
+          gtin?: string | null
+          id?: string
+          images?: string[] | null
+          in_stock?: boolean | null
+          is_featured?: boolean | null
+          name?: string
+          parent_id?: string | null
+          price?: number | null
+          product_type?: string | null
+          short_description?: string | null
+          sku?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          woo_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
