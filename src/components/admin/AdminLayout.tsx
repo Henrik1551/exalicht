@@ -7,6 +7,7 @@ import {
   Upload,
   ChevronLeft,
   Menu,
+  Settings2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -20,7 +21,8 @@ const navItems = [
   { href: '/admin', icon: LayoutDashboard, label: { de: 'Dashboard', en: 'Dashboard' } },
   { href: '/admin/orders', icon: ShoppingCart, label: { de: 'Bestellungen', en: 'Orders' } },
   { href: '/admin/products', icon: Package, label: { de: 'Produkte', en: 'Products' } },
-  { href: '/admin/import', icon: Upload, label: { de: 'Import', en: 'Import' } },
+  { href: '/admin/import', icon: Upload, label: { de: 'Produkt-Import', en: 'Product Import' } },
+  { href: '/admin/configurator-import', icon: Settings2, label: { de: 'Konfigurator-Import', en: 'Configurator Import' } },
 ];
 
 export function AdminLayout({ children }: AdminLayoutProps) {
