@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { stripHtml } from '@/lib/html-utils';
 
-// Sanitize HTML by removing script tags and event handlers
+// Sanitize HTML by removing script tags, event handlers, and cleaning up escaped newlines
 function sanitizeHtml(html: string): string {
   if (!html) return '';
   
@@ -23,8 +23,32 @@ function sanitizeHtml(html: string): string {
   // Remove data-inview and similar attributes that add clutter
   sanitized = sanitized.replace(/\s(data-inview|class)="[^"]*"/gi, '');
   
-  return sanitized;
+  // Remove literal \n sequences (escaped newlines stored as text)
+  sanitized = sanitized.replace(/\\n/g, '');
+  
+  // Clean up excessive whitespace
+  sanitized = sanitized.replace(/\s{3,}/g, ' ');
+  
+  return sanitized.trim();
 }
+
+// Clean text for short description (strip HTML + clean \n)
+function cleanTextContent(html: string | null): string {
+  if (!html) return '';
+  
+  // Strip HTML tags
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  let text = doc.body.textContent || '';
+  
+  // Remove literal \n sequences
+  text = text.replace(/\\n/g, ' ');
+  
+  // Clean up whitespace
+  text = text.replace(/\s+/g, ' ').trim();
+  
+  return text;
+}
+
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { language } = useLanguage();
@@ -125,8 +149,8 @@ const ProductDetail = () => {
     );
   }
 
-  const cleanDescription = stripHtml(product.description);
-  const cleanShortDescription = stripHtml(product.short_description);
+  // Use the cleanTextContent function that handles \n
+  const shortDescriptionText = cleanTextContent(product.short_description);
 
   return (
     <Layout>
@@ -219,9 +243,9 @@ const ProductDetail = () => {
             </div>
 
             {/* Short Description */}
-            {cleanShortDescription && (
+            {shortDescriptionText && (
               <p className="text-muted-foreground">
-                {cleanShortDescription}
+                {shortDescriptionText}
               </p>
             )}
 
