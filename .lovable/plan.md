@@ -1,105 +1,102 @@
 
 
-# 3D Lichtkuppel-Visualisierung für Konfigurator
+# 4 Separate Konfiguratoren - Auswahlseite + Spezifische Konfiguratoren
 
 ## Übersicht
 
-Implementierung einer interaktiven 3D-Vorschau der Lichtkuppel, die sich in Echtzeit an die Konfiguration anpasst. Die 3D-Ansicht wird oben auf der Seite angezeigt und reagiert auf alle Konfigurationsänderungen.
+Die `/configurator`-Seite wird zur Auswahlseite, auf der Benutzer zwischen 4 Produktkategorien wählen können. Jede Kategorie führt zu einem spezifischen Konfigurator mit angepasstem 3D-Modell.
 
 ---
 
-## Technische Umsetzung
+## Die 4 Konfiguratoren
 
-### Neue Dependencies
-
-```json
-{
-  "@react-three/fiber": "^8.18.0",
-  "@react-three/drei": "^9.122.0",
-  "three": "^0.170.0"
-}
-```
-
-**Hinweis**: Version 8 für fiber und Version 9 für drei sind erforderlich für React 18 Kompatibilität.
+| Nr | Name | Form | Beschreibung |
+|----|------|------|--------------|
+| 1 | Lichtkuppeln mit Aufsatzkranz (Rund) | Kreisform | Komplettset: Runde Kuppel + Aufsatzkranz |
+| 2 | Lichtkuppeln mit Aufsatzkranz (Quadratisch) | Quadrat | Komplettset: Quadratische Kuppel + Aufsatzkranz |
+| 3 | Lichtkuppeln/Oberschalen (Rund) | Kreisform | Nur die runde Kuppel, ohne Aufsatzkranz |
+| 4 | Lichtkuppeln/Oberschalen (Quadratisch) | Quadrat | Nur die quadratische Kuppel, ohne Aufsatzkranz |
 
 ---
 
-## 3D-Modell Struktur
-
-Die Lichtkuppel besteht aus drei Hauptkomponenten:
+## Architektur
 
 ```text
-┌─────────────────────────────────────────┐
-│           LICHTKUPPEL (Dome)            │
-│    ┌─────────────────────────────┐      │
-│    │    Gewölbte Oberschale      │      │  ← Transparent/Opal
-│    │    (1-5 Schichten)          │      │
-│    └─────────────────────────────┘      │
-├─────────────────────────────────────────┤
-│         LÜFTERRAHMEN (optional)         │  ← Metallrahmen
-├─────────────────────────────────────────┤
-│           AUFSATZKRANZ                  │
-│    ┌─────────────────────────────┐      │
-│    │    Weißer PVC-Rahmen        │      │  ← Variable Höhe
-│    │    (15/30/50 cm)            │      │
-│    └─────────────────────────────┘      │
-└─────────────────────────────────────────┘
+/configurator (Auswahlseite)
+    │
+    ├── Karte 1: "Rund + Aufsatzkranz"      → /configurator/rund-komplett
+    ├── Karte 2: "Quadratisch + Aufsatzkranz" → /configurator/quadrat-komplett  
+    ├── Karte 3: "Rund (nur Kuppel)"        → /configurator/rund-kuppel
+    └── Karte 4: "Quadratisch (nur Kuppel)" → /configurator/quadrat-kuppel
 ```
 
 ---
 
 ## Neue Komponenten
 
-### 1. SkylightModel3D.tsx
-Hauptkomponente für das 3D-Modell mit:
-- Dome (gewölbte Kuppel mit Materialtransparenz)
-- Shells (1-5 sichtbare Schichten)
-- Aufsatzkranz (weißer Rahmen, variable Höhe)
-- Lüfterrahmen (optional, Metalloptik)
+### 1. ConfiguratorSelection.tsx
+Auswahlseite mit 4 Karten:
+- Visuelles Icon für jede Variante (Kreis/Quadrat)
+- Kurze Beschreibung
+- CTA-Button zum jeweiligen Konfigurator
 
-### 2. Skylight3DViewer.tsx
-Canvas-Wrapper mit:
-- OrbitControls für Rotation/Zoom
-- Beleuchtung (Ambient + Directional)
-- Responsive Größenanpassung
-- Loading-State
+### 2. RoundDomeConfigurator.tsx
+Konfigurator für runde Lichtkuppeln mit Aufsatzkranz:
+- Größe: Durchmesser-Auswahl (z.B. 60, 80, 100, 120, 150 cm)
+- Alle bisherigen Optionen (Material, Schalen, etc.)
+- Aufsatzkranz inklusive
+
+### 3. SquareDomeConfigurator.tsx
+Bestehender Konfigurator für quadratische Komplettsets:
+- Größen: 80x80, 100x100, 110x110, 180x180
+- Mit Aufsatzkranz
+
+### 4. RoundShellOnlyConfigurator.tsx
+Nur runde Kuppel ohne Aufsatzkranz:
+- Kein Aufsatzkranz-Preisaufschlag
+- 3D-Modell zeigt nur Kuppel
+
+### 5. SquareShellOnlyConfigurator.tsx
+Nur quadratische Kuppel ohne Aufsatzkranz:
+- Kein Aufsatzkranz-Preisaufschlag
+- 3D-Modell zeigt nur Kuppel
 
 ---
 
-## Material-Mapping für 3D
+## 3D-Modell Anpassungen
 
-| Material | Farbe | Transparenz |
-|----------|-------|-------------|
-| Acryl klar | Hellblau | 90% transparent |
-| Acryl opal | Weiß | 60% transparent |
-| Heatstop klar | Goldton | 85% transparent |
-| Heatstop opal | Gold-weiß | 55% transparent |
-| Polycarbonat klar | Grau-blau | 80% transparent |
-| Polycarbonat opal | Grau-weiß | 50% transparent |
+### Runde Kuppel (neue Geometrie)
+- Kreisförmiger Aufsatzkranz statt quadratisch
+- Runde Dome-Base
+- Gleiche Shell-Logik (1-5 Schalen)
 
----
+### Quadratische Kuppel
+- Bestehende Geometrie wird wiederverwendet
 
-## UI-Layout Änderung
+### Ohne Aufsatzkranz
+- 3D-Modell zeigt nur die Kuppel
+- Kein Rahmen/Kranz darunter
 
 ```text
-+------------------------------------------+
-|  HEADER                                  |
-+------------------------------------------+
-|                                          |
-|     ┌────────────────────────────┐       |
-|     │                            │       |
-|     │      3D VORSCHAU           │       |
-|     │    (Interaktiv drehbar)    │       |
-|     │                            │       |
-|     └────────────────────────────┘       |
-|                                          |
-+------------------------------------------+
-|  KONFIGURATOR (bestehendes Layout)       |
-|  - Maße                                  |
-|  - Material & Optik                      |
-|  - Aufsatzkranz                          |
-|  - Lüfterrahmen                          |
-+------------------------------------------+
+MIT AUFSATZKRANZ:              OHNE AUFSATZKRANZ:
+┌──────────────┐               ┌──────────────┐
+│    Kuppel    │               │    Kuppel    │
+├──────────────┤               └──────────────┘
+│  Aufsatzkranz│                   (nur Dome)
+└──────────────┘
+```
+
+---
+
+## Routing-Änderungen
+
+```typescript
+// App.tsx - Neue Routes
+<Route path="/configurator" element={<Configurator />} />
+<Route path="/configurator/rund-komplett" element={<ConfiguratorRoundComplete />} />
+<Route path="/configurator/quadrat-komplett" element={<ConfiguratorSquareComplete />} />
+<Route path="/configurator/rund-kuppel" element={<ConfiguratorRoundShell />} />
+<Route path="/configurator/quadrat-kuppel" element={<ConfiguratorSquareShell />} />
 ```
 
 ---
@@ -108,27 +105,61 @@ Canvas-Wrapper mit:
 
 | Datei | Aktion |
 |-------|--------|
-| `src/components/configurator/SkylightModel3D.tsx` | **Neu** - 3D Modell |
-| `src/components/configurator/Skylight3DViewer.tsx` | **Neu** - Canvas Wrapper |
-| `src/components/configurator/ConfiguratorPage.tsx` | **Ändern** - 3D Viewer einbinden |
-| `package.json` | **Ändern** - 3D Dependencies |
+| `src/components/configurator/ConfiguratorSelection.tsx` | **Neu** - Auswahlseite |
+| `src/components/configurator/SquareDomeConfigurator.tsx` | **Neu** - Refactored aus bestehendem Code |
+| `src/components/configurator/RoundDomeConfigurator.tsx` | **Neu** - Runde Variante |
+| `src/components/configurator/SquareShellOnlyConfigurator.tsx` | **Neu** - Nur Kuppel |
+| `src/components/configurator/RoundShellOnlyConfigurator.tsx` | **Neu** - Nur Kuppel |
+| `src/components/configurator/SkylightModel3D.tsx` | **Ändern** - Runde Geometrie hinzufügen |
+| `src/components/configurator/Skylight3DViewer.tsx` | **Ändern** - Form-Prop hinzufügen |
+| `src/components/configurator/shared/ConfiguratorSummary.tsx` | **Neu** - Wiederverwendbare Zusammenfassung |
+| `src/components/configurator/shared/OptionButton.tsx` | **Neu** - Wiederverwendbarer Button |
+| `src/pages/Configurator.tsx` | **Ändern** - Auswahlseite einbinden |
+| `src/pages/configurator/RoundComplete.tsx` | **Neu** - Page wrapper |
+| `src/pages/configurator/SquareComplete.tsx` | **Neu** - Page wrapper |
+| `src/pages/configurator/RoundShell.tsx` | **Neu** - Page wrapper |
+| `src/pages/configurator/SquareShell.tsx` | **Neu** - Page wrapper |
+| `src/App.tsx` | **Ändern** - Neue Routes |
 
 ---
 
-## Technische Details
+## Auswahlseite Design
 
-### Dome-Geometrie
-- Verwendung von `SphereGeometry` mit oberer Hälfte für die gewölbte Form
-- Skalierung basierend auf `groesse` (80-180 cm)
-- Mehrere geschachtelte Sphären für Multi-Shell-Darstellung
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                    LICHTKUPPEL KONFIGURATOR                     │
+│         Wählen Sie Ihre Produktkategorie                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   ┌─────────────────┐         ┌─────────────────┐               │
+│   │       ○         │         │       □         │               │
+│   │                 │         │                 │               │
+│   │  RUND           │         │  QUADRATISCH    │               │
+│   │  mit Aufsatzkranz│         │  mit Aufsatzkranz│               │
+│   │                 │         │                 │               │
+│   │  [Konfigurieren]│         │  [Konfigurieren]│               │
+│   └─────────────────┘         └─────────────────┘               │
+│                                                                 │
+│   ┌─────────────────┐         ┌─────────────────┐               │
+│   │       ○         │         │       □         │               │
+│   │                 │         │                 │               │
+│   │  RUND           │         │  QUADRATISCH    │               │
+│   │  nur Oberschale │         │  nur Oberschale │               │
+│   │                 │         │                 │               │
+│   │  [Konfigurieren]│         │  [Konfigurieren]│               │
+│   └─────────────────┘         └─────────────────┘               │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-### Interaktivität
-- OrbitControls: Drehen, Zoomen, Schwenken
-- Auto-Rotation (optional, abschaltbar)
-- Smooth camera transitions bei Konfigurationsänderungen
+---
 
-### Performance
-- Suspense für Lazy Loading
-- Optimierte Geometrien
-- Canvas nur rendern wenn sichtbar
+## Datenbank-Hinweis
+
+Aktuell sind in der Datenbank keine runden Lichtkuppeln oder Aufsatzkränze vorhanden. Die Konfiguratoren für runde Produkte werden "auf Anfrage" anzeigen, bis entsprechende Daten importiert werden.
+
+**Vorhandene Daten:**
+- Quadratische Lichtkuppeln: 100x100, 120x120, 150x150
+- Quadratische Aufsatzkränze: 100x100, 120x120, 150x150
+- Runde Lüfterrahmen: 60, 80, 100, 120, 150 cm (bereits vorhanden!)
 
