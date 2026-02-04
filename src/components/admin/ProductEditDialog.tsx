@@ -28,6 +28,7 @@ interface Product {
   weight_kg?: number | null;
   gtin?: string | null;
   is_featured?: boolean | null;
+  stock_quantity?: number | null;
 }
 
 interface ProductEditDialogProps {
@@ -54,6 +55,7 @@ export function ProductEditDialog({
     description: '',
     weight_kg: '',
     gtin: '',
+    stock_quantity: '',
     in_stock: true,
     is_featured: false,
   });
@@ -69,6 +71,7 @@ export function ProductEditDialog({
         description: product.description || '',
         weight_kg: product.weight_kg?.toString() || '',
         gtin: product.gtin || '',
+        stock_quantity: product.stock_quantity?.toString() || '',
         in_stock: product.in_stock ?? true,
         is_featured: product.is_featured ?? false,
       });
@@ -92,6 +95,7 @@ export function ProductEditDialog({
           description: formData.description || null,
           weight_kg: formData.weight_kg ? parseFloat(formData.weight_kg) : null,
           gtin: formData.gtin || null,
+          stock_quantity: formData.stock_quantity ? parseInt(formData.stock_quantity, 10) : null,
           in_stock: formData.in_stock,
           is_featured: formData.is_featured,
         })
@@ -140,7 +144,7 @@ export function ProductEditDialog({
           </div>
 
           {/* SKU & Price Row */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="sku">SKU</Label>
               <Input
@@ -158,6 +162,22 @@ export function ProductEditDialog({
                 min="0"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="stock_quantity">
+                {language === 'de' ? 'Lagerbestand' : 'Stock Quantity'}
+              </Label>
+              <Input
+                id="stock_quantity"
+                type="number"
+                min="0"
+                step="1"
+                placeholder={language === 'de' ? 'Nicht verfolgt' : 'Not tracked'}
+                value={formData.stock_quantity}
+                onChange={(e) =>
+                  setFormData({ ...formData, stock_quantity: e.target.value })
+                }
               />
             </div>
           </div>

@@ -48,6 +48,7 @@ interface Product {
   weight_kg?: number | null;
   gtin?: string | null;
   is_featured?: boolean | null;
+  stock_quantity?: number | null;
 }
 
 export function ProductsTable() {
@@ -65,7 +66,7 @@ export function ProductsTable() {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, sku, price, in_stock, category, images, short_description, description, weight_kg, gtin, is_featured')
+        .select('id, name, sku, price, in_stock, category, images, short_description, description, weight_kg, gtin, is_featured, stock_quantity')
         .order('name');
 
       if (error) throw error;
@@ -160,6 +161,7 @@ export function ProductsTable() {
               <TableHead>{language === 'de' ? 'Name' : 'Name'}</TableHead>
               <TableHead>SKU</TableHead>
               <TableHead>{language === 'de' ? 'Preis' : 'Price'}</TableHead>
+              <TableHead>{language === 'de' ? 'Bestand' : 'Stock'}</TableHead>
               <TableHead>{language === 'de' ? 'Status' : 'Status'}</TableHead>
               <TableHead>{language === 'de' ? 'Kategorie' : 'Category'}</TableHead>
               <TableHead className="w-12"></TableHead>
@@ -168,7 +170,7 @@ export function ProductsTable() {
           <TableBody>
             {filteredProducts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   {language === 'de' ? 'Keine Produkte gefunden' : 'No products found'}
                 </TableCell>
               </TableRow>
@@ -203,6 +205,11 @@ export function ProductsTable() {
                   </TableCell>
                   <TableCell>
                     {product.price ? formatPrice(product.price, language) : '-'}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {product.stock_quantity !== null && product.stock_quantity !== undefined
+                      ? product.stock_quantity
+                      : '-'}
                   </TableCell>
                   <TableCell>
                     <Badge variant={product.in_stock ? 'default' : 'secondary'}>
