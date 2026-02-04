@@ -18,10 +18,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPrice } from '@/lib/order-utils';
 import { Loader2, Search } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Product {
   id: string;
@@ -38,26 +49,66 @@ export function ProductsTable() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, sku, price, in_stock, category, images')
+        .order('name');
+
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('id, name, sku, price, in_stock, category, images')
-          .order('name');
-
-        if (error) throw error;
-        setProducts(data || []);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProducts();
   }, []);
+
+  const handleDeleteClick = (product: Product) => {
+    setProductToDelete(product);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!productToDelete) return;
+
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', productToDelete.id);
+
+      if (error) throw error;
+
+      toast.success(
+        language === 'de'
+          ? `"${productToDelete.name}" wurde gelöscht`
+          : `"${productToDelete.name}" has been deleted`
+      );
+      setProducts(products.filter((p) => p.id !== productToDelete.id));
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast.error(
+        language === 'de'
+          ? 'Fehler beim Löschen des Produkts'
+          : 'Failed to delete product'
+      );
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+      setProductToDelete(null);
+    }
+  };
 
   const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -172,7 +223,10 @@ export function ProductsTable() {
                           <Edit className="mr-2 h-4 w-4" />
                           {language === 'de' ? 'Bearbeiten' : 'Edit'}
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => handleDeleteClick(product)}
+                        >
                           <Trash2 className="mr-2 h-4 w-4" />
                           {language === 'de' ? 'Löschen' : 'Delete'}
                         </DropdownMenuItem>
@@ -185,6 +239,37 @@ export function ProductsTable() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {language === 'de' ? 'Produkt löschen?' : 'Delete product?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {language === 'de'
+                ? `Sind Sie sicher, dass Sie "${productToDelete?.name}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.`
+                : `Are you sure you want to delete "${productToDelete?.name}"? This action cannot be undone.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>
+              {language === 'de' ? 'Abbrechen' : 'Cancel'}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              {language === 'de' ? 'Löschen' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
