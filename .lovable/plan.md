@@ -1,118 +1,133 @@
 
 
-# Preisberechnung synchronisieren mit Datenbank
+# Konfigurator an alte Seite anpassen
 
-## Aktueller Stand
+## Übersicht
 
-Nach Analyse der Datenbank und dem Vergleich mit dem Beispiel aus der alten Seite:
-
-**Beispiel alte Seite:**
-- 80x80 cm, Heatstop, klar, 1-schalig, 15cm Aufsatzkranz, Dämmung 20mm, festverglast = **338,40€**
-
-**Problem:** Die Datenbank enthält keine 80x80 Produkte!
+Die aktuelle Implementierung muss an das Design der alten Seite angepasst werden. Die Hauptunterschiede betreffen die Dimensionsauswahl, Aufsatzkranz-Optionen und Lüfterrahmen-Varianten.
 
 ---
 
-## Datenbank-Analyse
+## Unterschiede zum aktuellen Stand
 
-### Vorhandene Lichtkuppeln
-
-| Größe | Acryl | Heatstop | Polycarbonat |
-|-------|-------|----------|--------------|
-| 80x80 | - | - | - |
-| 100x100 | 1-5 Schalen | 1-5 Schalen | 1-5 Schalen |
-| 110x110 | - | - | - |
-| 120x120 | 1-5 Schalen | - | - |
-| 150x150 | 1-5 Schalen | - | - |
-| 180x180 | - | - | - |
-
-### Vorhandene Aufsatzkränze
-
-| Größe | H15 | H30 | H50 | Dämmung |
-|-------|-----|-----|-----|---------|
-| 100x100 | 274,20€ | 360,90€ | 176,70€ | 20mm Standard |
-| 120x120 | 320,00€ | 420,00€ | 520,00€ | 20mm |
-| 150x150 | 380,00€ | 490,00€ | 620,00€ | 20mm |
-
----
-
-## Lösungsplan
-
-### Schritt 1: Größen im Konfigurator anpassen
-
-Die UI bietet Größen an, die nicht in der Datenbank existieren. Optionen:
-
-**Option A (empfohlen):** Nur vorhandene Größen anbieten
-- Quadratisch: 100x100, 120x120, 150x150 cm
-- Fehlende Kombinationen als "auf Anfrage" markieren
-
-**Option B:** Alle Größen importieren
-- Benötigt vollständige Preisliste für 80x80, 110x110, 180x180
-- Benötigt Heatstop/PC Preise für alle Größen
-
-### Schritt 2: Preisberechnung-Logik bestätigen
-
-Basierend auf dem Beispiel (€338,40):
-```
-Gesamtpreis = Lichtkuppel + Aufsatzkranz + (Lüfterrahmen wenn nicht festverglast)
-```
-
-Die Dämmung (20mm) ist bereits im Aufsatzkranz-Preis enthalten.
-
-### Schritt 3: Fehlende Daten visualisieren
-
-Wenn eine Konfiguration nicht in der Datenbank gefunden wird:
-- Klare "Preis auf Anfrage" Anzeige
-- Möglichkeit zur Kontaktaufnahme
-- Hinweis welche Komponente fehlt
+| Bereich | Alt (Screenshot) | Aktuell | Änderung |
+|---------|-----------------|---------|----------|
+| Maße | Separate Länge + Breite | Nur quadratische Größe | Länge/Breite getrennt |
+| Größen | 80, 100, 110, 180 | 80, 100, 110, 180 | Passt bereits |
+| Dämmung | 20mm (angezeigt) | Nicht angezeigt | Anzeigen (fest 20mm) |
+| Lüfterrahmen | 4 Varianten inkl. Spindel | 3 Varianten | Spindel hinzufügen |
+| Preis-Anzeige | Einzelne Preisfelder | Zusammenfassung-Card | Layout anpassen |
 
 ---
 
 ## Technische Änderungen
 
-### Dateien die angepasst werden
+### 1. BaseConfigurator.tsx - Maße-Sektion
+
+Separate Länge und Breite-Felder statt kombinierter Größe:
+
+```typescript
+// NEU: Separate Dimensionen für rechteckig/quadratisch
+interface SquareConfigSelection extends BaseConfigSelection {
+  laenge: 80 | 100 | 110 | 180;
+  breite: 80 | 100 | 110 | 180;
+}
+
+const DIMENSIONS = [80, 100, 110, 180];
+```
+
+Die Breite-Optionen werden dynamisch basierend auf der Länge angezeigt (≤ Länge für echte Rechtecke).
+
+### 2. Lüfterrahmen - Spindel-Option
+
+```typescript
+// NEU: 4 Varianten statt 3
+luefterrahmen: 'festverglast' | 'spindel' | '230v' | '24v';
+```
+
+UI-Labels:
+- festverglast (nicht zu öffnen)
+- manuell offenbar (Spindel)
+- elektrisch offenbar (230V Antrieb)
+- elektrisch offenbar (24V RWA-Antrieb)
+
+### 3. Aufsatzkranz - Dämmung anzeigen
+
+Zeige "Dämmung: 20 mm" als festes Info-Feld in der Aufsatzkranz-Sektion.
+
+### 4. Preis-Layout anpassen
+
+Die alte Seite zeigt Preise direkt unter den Optionen in Input-Feldern (readonly):
+- Lichtkuppel Preis (€): 104,1
+- Aufsatzkranz Preis (€): 219,3
+- Lüfterrahmen Preis (€): 0
+- Zusatzkosten (€): 0
+
+---
+
+## Dateien
 
 | Datei | Änderung |
 |-------|----------|
-| `src/components/configurator/BaseConfigurator.tsx` | Größen-Arrays auf DB-Werte anpassen |
-| `src/components/configurator/shared/ConfiguratorSummary.tsx` | Bessere "auf Anfrage" Darstellung |
+| `src/components/configurator/BaseConfigurator.tsx` | Separate Länge/Breite, Spindel-Option, Dämmung-Anzeige |
+| `src/components/configurator/shared/ConfiguratorSummary.tsx` | Preis-Layout wie alte Seite |
 
-### Größen-Konstanten aktualisieren
+---
 
-```typescript
-// ALT (nicht in DB vorhanden)
-const SQUARE_SIZES = [80, 100, 110, 180];
+## UI-Layout nach Änderung
 
-// NEU (in DB vorhanden)
-const SQUARE_SIZES = [100, 120, 150];
-```
-
-### Material-Verfügbarkeit prüfen
-
-```typescript
-// Heatstop und Polycarbonat nur für 100x100 verfügbar
-// Bei anderen Größen Material-Optionen einschränken oder "auf Anfrage" anzeigen
+```text
+┌────────────────────────────────────────────────────┐
+│ Länge *                                            │
+│ ● 80  ○ 100  ○ 110  ○ 180                          │
+├────────────────────────────────────────────────────┤
+│ Breite *                                           │
+│ ● 80  (dynamisch basierend auf Länge)              │
+├────────────────────────────────────────────────────┤
+│ OBERSCHALE (Material & Optik)                      │
+│                                                    │
+│ Material *                                         │
+│ ● Acryl (Standard)                                 │
+│ ○ Heatstop (wärmereflektierend)                    │
+│ ○ Polycarbonat (schlagfest)                        │
+│                                                    │
+│ Optik *                                            │
+│ ● klar (transparent)  ○ opal (Milchglas)           │
+│                                                    │
+│ Schale *                                           │
+│ ● 1-schalig  ○ 2  ○ 3  ○ 4  ○ 5                    │
+├────────────────────────────────────────────────────┤
+│ AUFSATZKRANZ                                       │
+│ (Rahmen zwischen Dach und Kuppel)                  │
+│                                                    │
+│ Höhe *                                             │
+│ ● 15 cm  ○ 30 cm  ○ 50 cm                          │
+│                                                    │
+│ Dämmung *                                          │
+│ ● 20 mm                                            │
+├────────────────────────────────────────────────────┤
+│ Lüfterrahmen (optional)                            │
+│                                                    │
+│ Varianten *                                        │
+│ ● festverglast (nicht zu öffnen)                   │
+│ ○ manuell offenbar (Spindel)                       │
+│ ○ elektrisch offenbar (230V Antrieb)               │
+│ ○ elektrisch offenbar (24V RWA-Antrieb)            │
+├────────────────────────────────────────────────────┤
+│ Lichtkuppel Preis (€)    │ 104,10                  │
+│ Aufsatzkranz Preis (€)   │ 219,30                  │
+│ Lüfterrahmen Preis (€)   │ 0,00                    │
+│ Zusatzkosten (€)         │ 0,00                    │
+└────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Alternative: Vollständiger Daten-Import
+## Datenbank-Hinweis
 
-Falls Sie die Preisliste für alle Größen haben, können diese über den Admin-Import (`/admin/configurator-import`) hinzugefügt werden:
+Die Größen 80x80, 110x110, 180x180 sind noch nicht in der Datenbank vorhanden. Diese Konfigurationen werden weiterhin "auf Anfrage" anzeigen bis die entsprechenden Preisdaten importiert werden.
 
-Benötigte Daten:
-- Lichtkuppeln: 80x80, 110x110, 180x180 für alle Materialien/Schalen
-- Aufsatzkränze: 80x80, 110x110, 180x180 für alle Höhen
-- Heatstop/Polycarbonat: 120x120, 150x150
-
----
-
-## Zusammenfassung
-
-Die Preislogik im Konfigurator ist korrekt implementiert:
-- Lichtkuppel + Aufsatzkranz + Lüfterrahmen (optional)
-
-Das Problem ist, dass die Datenbank unvollständig ist. Die verfügbaren Optionen müssen entweder:
-1. An die vorhandenen Datenbank-Einträge angepasst werden, ODER
-2. Die fehlenden Preisdaten importiert werden
+Vorhandene Daten:
+- 100x100, 120x120, 150x150 (alle Materialien, alle Schalen)
+- Aufsatzkranz: 100x100, 120x120, 150x150 mit H15/H30/H50
 
