@@ -14,10 +14,9 @@ import { formatPrice } from '@/lib/order-utils';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
 
-// New interface according to plan
+// Simplified interface - only square sizes allowed
 interface ConfigSelection {
-  laenge: number;
-  breite: number;
+  groesse: 80 | 100 | 110 | 180;  // Single size value for square dimensions
   material: 'acryl' | 'heatstop' | 'polycarbonat';
   optik: 'klar' | 'opal';
   shells: 1 | 2 | 3 | 4 | 5;
@@ -27,8 +26,7 @@ interface ConfigSelection {
 }
 
 const defaultSelection: ConfigSelection = {
-  laenge: 100,
-  breite: 100,
+  groesse: 100,
   material: 'acryl',
   optik: 'klar',
   shells: 2,
@@ -37,9 +35,8 @@ const defaultSelection: ConfigSelection = {
   quantity: 1,
 };
 
-// Available options
-const AVAILABLE_LAENGEN = [80, 100, 110, 180];
-const AVAILABLE_BREITEN = [80, 100, 110, 180];
+// Available options - only square sizes
+const AVAILABLE_GROESSEN: (80 | 100 | 110 | 180)[] = [80, 100, 110, 180];
 const SHELL_OPTIONS: (1 | 2 | 3 | 4 | 5)[] = [1, 2, 3, 4, 5];
 const KRANZ_HEIGHTS: (15 | 30 | 50)[] = [15, 30, 50];
 
@@ -64,26 +61,27 @@ export function ConfiguratorPage() {
   // Calculate prices based on selection
   const prices = useMemo(() => {
     const dbMaterial = MATERIAL_MAP[selection.material];
+    const size = selection.groesse;
     
-    // Find matching Lichtkuppel
+    // Find matching Lichtkuppel (square size: width = length = groesse)
     const lkItem = lichtkuppelItems?.find(item => 
-      item.width_cm === selection.laenge &&
-      item.length_cm === selection.breite &&
+      item.width_cm === size &&
+      item.length_cm === size &&
       item.material === dbMaterial &&
       item.shells === selection.shells
     );
 
     // Find matching Aufsatzkranz
     const kranzItem = kranzItems?.find(item =>
-      item.width_cm === selection.laenge &&
-      item.length_cm === selection.breite &&
+      item.width_cm === size &&
+      item.length_cm === size &&
       item.height_cm === selection.kranzHeight
     );
 
     // Find matching Lüfterrahmen (only if not festverglast - fixed glazing is part of dome)
     const luefterItem = selection.luefterrahmen !== 'festverglast' ? luefterItems?.find(item =>
-      item.width_cm === selection.laenge &&
-      item.length_cm === selection.breite
+      item.width_cm === size &&
+      item.length_cm === size
     ) : null;
 
     const lichtkuppelPrice = lkItem?.sale_price || 0;
@@ -138,18 +136,9 @@ export function ConfiguratorPage() {
   };
 
   const handleAddToCart = () => {
-    const sizeLabel = selection.laenge === selection.breite 
-      ? `${selection.laenge}x${selection.laenge}` 
-      : `${selection.laenge}x${selection.breite}`;
-    
+    const sizeLabel = `${selection.groesse}x${selection.groesse}`;
     const configName = `Lichtkuppel ${sizeLabel} cm`;
     
-    const description = [
-      `${selection.shells}-schalig ${getMaterialLabel(selection.material)} ${selection.optik}`,
-      `+ Aufsatzkranz ${selection.kranzHeight}cm`,
-      selection.luefterrahmen !== 'festverglast' ? `+ Lüfterrahmen ${getLuefterrahmenLabel(selection.luefterrahmen)}` : null,
-    ].filter(Boolean).join(', ');
-
     const configSku = `KONFIG-${sizeLabel}-${MATERIAL_MAP[selection.material]}-${selection.shells}S`;
 
     addItem({
@@ -232,7 +221,7 @@ export function ConfiguratorPage() {
         {/* Configuration Options */}
         <div className="lg:col-span-2 space-y-6">
           
-          {/* 1. Maße [ULW] */}
+          {/* 1. Maße [ULW] - Nur quadratische Größen */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -243,42 +232,18 @@ export function ConfiguratorPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Länge */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">
-                  {language === 'de' ? 'Länge' : 'Length'} <span className="text-destructive">*</span>
+                  {language === 'de' ? 'Größe' : 'Size'} <span className="text-destructive">*</span>
                 </Label>
                 <div className="flex flex-wrap gap-2">
-                  {AVAILABLE_LAENGEN.map(l => (
+                  {AVAILABLE_GROESSEN.map(size => (
                     <OptionButton
-                      key={l}
-                      selected={selection.laenge === l}
-                      onClick={() => setSelection(s => ({ 
-                        ...s, 
-                        laenge: l,
-                        // Ensure breite >= laenge for valid combinations
-                        breite: s.breite < l ? l : s.breite 
-                      }))}
+                      key={size}
+                      selected={selection.groesse === size}
+                      onClick={() => setSelection(s => ({ ...s, groesse: size }))}
                     >
-                      {l} cm
-                    </OptionButton>
-                  ))}
-                </div>
-              </div>
-
-              {/* Breite */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">
-                  {language === 'de' ? 'Breite' : 'Width'} <span className="text-destructive">*</span>
-                </Label>
-                <div className="flex flex-wrap gap-2">
-                  {AVAILABLE_BREITEN.filter(b => b >= selection.laenge).map(b => (
-                    <OptionButton
-                      key={b}
-                      selected={selection.breite === b}
-                      onClick={() => setSelection(s => ({ ...s, breite: b }))}
-                    >
-                      {b} cm
+                      {size} x {size} cm
                     </OptionButton>
                   ))}
                 </div>
@@ -288,7 +253,7 @@ export function ConfiguratorPage() {
               <div className="pt-2 text-sm text-muted-foreground">
                 {language === 'de' ? 'Gewählte Größe:' : 'Selected size:'}{' '}
                 <span className="font-medium text-foreground">
-                  {selection.laenge} x {selection.breite} cm
+                  {selection.groesse} x {selection.groesse} cm
                 </span>
               </div>
             </CardContent>
@@ -464,7 +429,7 @@ export function ConfiguratorPage() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{language === 'de' ? 'Größe' : 'Size'}:</span>
-                      <span className="font-medium">{selection.laenge} x {selection.breite} cm</span>
+                      <span className="font-medium">{selection.groesse} x {selection.groesse} cm</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Material:</span>
