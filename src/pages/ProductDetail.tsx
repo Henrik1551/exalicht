@@ -9,6 +9,22 @@ import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { stripHtml } from '@/lib/html-utils';
 
+// Sanitize HTML by removing script tags and event handlers
+function sanitizeHtml(html: string): string {
+  if (!html) return '';
+  
+  // Remove script tags
+  let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  
+  // Remove on* event handlers
+  sanitized = sanitized.replace(/\son\w+="[^"]*"/gi, '');
+  sanitized = sanitized.replace(/\son\w+='[^']*'/gi, '');
+  
+  // Remove data-inview and similar attributes that add clutter
+  sanitized = sanitized.replace(/\s(data-inview|class)="[^"]*"/gi, '');
+  
+  return sanitized;
+}
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { language } = useLanguage();
@@ -282,15 +298,27 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* Full Description */}
-        {cleanDescription && (
+        {/* Full Description - rendered as HTML */}
+        {product.description && (
           <div className="mt-12 pt-8 border-t border-border">
-            <h2 className="text-xl font-bold text-foreground mb-4">
+            <h2 className="text-xl font-bold text-foreground mb-6">
               {language === 'de' ? 'Beschreibung' : 'Description'}
             </h2>
-            <div className="prose prose-sm max-w-none text-muted-foreground">
-              <p className="whitespace-pre-line">{cleanDescription}</p>
-            </div>
+            <div 
+              className="product-description prose prose-sm max-w-none
+                [&_h1]:text-xl [&_h1]:font-bold [&_h1]:text-foreground [&_h1]:mt-6 [&_h1]:mb-3
+                [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-foreground [&_h2]:mt-6 [&_h2]:mb-3
+                [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_h3]:mt-4 [&_h3]:mb-2
+                [&_p]:text-muted-foreground [&_p]:mb-3
+                [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_ul]:space-y-2
+                [&_li]:text-muted-foreground
+                [&_table]:w-full [&_table]:border-collapse [&_table]:my-4
+                [&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm
+                [&_tr:nth-child(odd)]:bg-muted/30
+                [&_strong]:font-semibold [&_strong]:text-foreground
+              "
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.description) }}
+            />
           </div>
         )}
       </div>
