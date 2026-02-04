@@ -1,94 +1,48 @@
 
+## Add "Bild folgt..." Text to Product Cards
 
-# Lichtkuppel-direkt.de Website Rebuild Plan
+### What I'll Do
+Add a text label "Bild folgt..." (or "Image coming..." in English) underneath the placeholder icon in product cards that don't have an image yet.
 
-## 🎨 Design Direction
-**Premium & Technical** look with your existing brand colors:
-- Primary: **Orange/Amber** (#E67E22 tones)
-- Background: **Clean white** with subtle grays
-- Text: **Dark charcoal** for readability
-- Accents: Technical icons, clean typography, professional imagery
+### Changes
 
----
+**File: `src/components/products/ProductCard.tsx`**
 
-## Phase 1: Complete Website (Frontend)
+1. Update the image section to conditionally render either:
+   - The actual product image (if `product.image` exists)
+   - The placeholder icon with "Bild folgt..." text underneath
 
-### 1. **Homepage**
-- Modern hero section with fullscreen product imagery
-- Animated benefits grid (Große Auswahl, Geprüfte Qualität, etc.)
-- Featured product categories with hover effects
-- 5-step process visual guide
-- Company introduction section
-- Contact form with validation
+2. The text will be:
+   - German: "Bild folgt..."
+   - English: "Image coming..."
 
-### 2. **Product Pages**
-- Category overview (Lichtkuppeln, Zubehör, RWA Systems)
-- Individual product cards with key specs
-- **Product Configurator**: Step-by-step configuration (shape → size → material → options)
-- **Product Comparison Tool**: Side-by-side comparison of up to 3 products
-- Technical specifications tables
+3. Styling:
+   - Small, muted text (`text-xs text-muted-foreground`)
+   - Positioned below the Package icon
+   - Subtle italic style to indicate it's a placeholder message
 
-### 3. **Quote Request System**
-- Multi-step quote form
-- Product selection from configurator
-- File upload for project drawings
-- Automatic confirmation emails
+### Code Change Preview
 
-### 4. **Download Center**
-- Categorized document library (Datasheets, Installation Guides, Certifications)
-- Filterable by product type
-- PDF preview and download
+```tsx
+{/* Image */}
+<div className="aspect-square bg-muted flex flex-col items-center justify-center relative overflow-hidden">
+  {product.image ? (
+    <img 
+      src={product.image} 
+      alt={product.name}
+      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+    />
+  ) : (
+    <>
+      <Package className="h-16 w-16 text-muted-foreground/30 group-hover:scale-110 transition-transform duration-300" />
+      <span className="text-xs text-muted-foreground/50 mt-2 italic">
+        {language === 'de' ? 'Bild folgt...' : 'Image coming...'}
+      </span>
+    </>
+  )}
+  
+  {/* Badges remain unchanged... */}
+</div>
+```
 
-### 5. **About / Company Page**
-- EXA Sicherheitstechnik story
-- Team/founder section
-- Certifications and quality standards
-
-### 6. **Contact Page**
-- Contact form with validation
-- Business hours and location
-- Phone and email quick links
-
-### 7. **Multilingual Support**
-- Language switcher (DE/EN)
-- All content translatable
-
----
-
-## Phase 2: Backend & Admin Panel
-
-### Database (Lovable Cloud)
-- Products with variants, pricing, and specs
-- Categories and product relationships
-- Quote requests and status tracking
-- Customers database
-- Documents/downloads library
-- User roles (Admin, Customer)
-
-### Admin Dashboard
-- **Product Management**: Add/edit/delete products, variants, pricing
-- **Quote Management**: View, respond to, and track quote requests
-- **Document Management**: Upload/organize PDFs and datasheets
-- **Customer Management**: View customer data and inquiry history
-- **Analytics Dashboard**: Basic metrics overview
-
----
-
-## Phase 3: Shop & Payments
-
-### Stripe Integration
-- Shopping cart functionality
-- Secure checkout with Stripe
-- Product with variants and pricing
-- Order confirmation and tracking
-- Customer account with order history
-
----
-
-## Technical Foundation
-- **Frontend**: React + TypeScript + Tailwind CSS
-- **Backend**: Lovable Cloud (Supabase)
-- **Payments**: Stripe (custom integration)
-- **Authentication**: Email/password for admin and customers
-- **Responsive**: Mobile-first design
-
+This is a small, focused change that improves the user experience by clearly indicating that product images are pending.
