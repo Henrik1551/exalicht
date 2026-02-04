@@ -243,10 +243,17 @@ const ProductDetail = () => {
             </div>
 
             {/* Short Description */}
-            {shortDescriptionText && (
-              <p className="text-muted-foreground">
-                {shortDescriptionText}
-              </p>
+            {product.short_description && (
+              <div 
+                className="text-muted-foreground prose prose-sm max-w-none
+                  [&_h1]:text-lg [&_h1]:font-bold [&_h1]:text-foreground [&_h1]:mt-0 [&_h1]:mb-2
+                  [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-foreground [&_h2]:mt-0 [&_h2]:mb-2
+                  [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-0 [&_ul]:space-y-1
+                  [&_li]:text-muted-foreground [&_li]:text-sm
+                  [&_p]:mb-2
+                "
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.short_description) }}
+              />
             )}
 
             {/* Price */}
