@@ -22,8 +22,21 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <div className="group bg-card border border-border rounded-xl overflow-hidden hover:shadow-lg hover:border-primary/30 transition-all duration-300">
       {/* Image */}
-      <div className="aspect-square bg-muted flex items-center justify-center relative overflow-hidden">
-        <Package className="h-16 w-16 text-muted-foreground/30 group-hover:scale-110 transition-transform duration-300" />
+      <div className="aspect-square bg-muted flex flex-col items-center justify-center relative overflow-hidden">
+        {product.image ? (
+          <img 
+            src={product.image} 
+            alt={product.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          <>
+            <Package className="h-16 w-16 text-muted-foreground/30 group-hover:scale-110 transition-transform duration-300" />
+            <span className="text-xs text-muted-foreground/50 mt-2 italic">
+              {language === 'de' ? 'Bild folgt...' : 'Image coming...'}
+            </span>
+          </>
+        )}
         
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-2">
