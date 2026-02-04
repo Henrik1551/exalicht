@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Product } from '@/lib/products-data';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useCart } from '@/contexts/CartContext';
 import { stripHtml, truncateText } from '@/lib/html-utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProductCardProps {
   product: Product;
@@ -12,6 +14,28 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const { language } = useLanguage();
+  const { addItem } = useCart();
+  const { toast } = useToast();
+  
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (product.minPrice > 0) {
+      addItem({
+        productId: product.id,
+        name: product.name,
+        sku: null,
+        price: product.minPrice,
+        image: product.image || null,
+      });
+      
+      toast({
+        title: language === 'de' ? 'Zum Warenkorb hinzugefügt' : 'Added to cart',
+        description: product.name,
+      });
+    }
+  };
   
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('de-DE', {
@@ -67,10 +91,17 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Quick actions */}
         <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/5 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
           <div className="flex gap-2">
-            <Button size="icon" variant="secondary" className="h-10 w-10 rounded-full shadow-md">
-              <Eye className="h-4 w-4" />
+            <Button asChild size="icon" variant="secondary" className="h-10 w-10 rounded-full shadow-md">
+              <Link to={`/products/${product.id}`}>
+                <Eye className="h-4 w-4" />
+              </Link>
             </Button>
-            <Button size="icon" className="h-10 w-10 rounded-full shadow-md" disabled={!product.inStock}>
+            <Button 
+              size="icon" 
+              className="h-10 w-10 rounded-full shadow-md" 
+              disabled={!product.inStock || product.minPrice <= 0}
+              onClick={handleAddToCart}
+            >
               <ShoppingCart className="h-4 w-4" />
             </Button>
           </div>
