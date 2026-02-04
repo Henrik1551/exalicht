@@ -2,6 +2,8 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
+export type SkylightShape = 'round' | 'square';
+
 interface SkylightModel3DProps {
   groesse: 80 | 100 | 110 | 180;
   material: 'acryl' | 'heatstop' | 'polycarbonat';
@@ -9,6 +11,8 @@ interface SkylightModel3DProps {
   shells: 1 | 2 | 3 | 4 | 5;
   kranzHeight: 15 | 30 | 50;
   luefterrahmen: 'festverglast' | '230v' | '24v';
+  shape?: SkylightShape;
+  showCurb?: boolean;
 }
 
 // Material color and transparency mapping
@@ -66,8 +70,8 @@ function DomeShell({
   );
 }
 
-// Mounting curb (Aufsatzkranz) - white PVC frame
-function MountingCurb({ 
+// Square Mounting curb (Aufsatzkranz) - white PVC frame
+function SquareMountingCurb({ 
   size, 
   height 
 }: { 
@@ -75,13 +79,6 @@ function MountingCurb({
   height: number;
 }) {
   const frameThickness = 0.03;
-  const curb = useMemo(() => {
-    // Create a box frame around the perimeter
-    const outerSize = size;
-    const innerSize = size - frameThickness * 2;
-    
-    return { outerSize, innerSize, frameThickness };
-  }, [size]);
 
   return (
     <group position={[0, -height / 2, 0]}>
@@ -110,8 +107,39 @@ function MountingCurb({
   );
 }
 
-// Ventilation frame (Lüfterrahmen) - metallic frame
-function VentilationFrame({ 
+// Round Mounting curb (Aufsatzkranz) - circular white PVC frame
+function RoundMountingCurb({ 
+  radius, 
+  height 
+}: { 
+  radius: number; 
+  height: number;
+}) {
+  const wallThickness = 0.03;
+
+  return (
+    <group position={[0, -height / 2, 0]}>
+      {/* Outer cylinder */}
+      <mesh>
+        <cylinderGeometry args={[radius, radius, height, 64, 1, true]} />
+        <meshStandardMaterial color="#f0f0f0" roughness={0.3} side={THREE.DoubleSide} />
+      </mesh>
+      {/* Inner cylinder (slightly smaller) */}
+      <mesh>
+        <cylinderGeometry args={[radius - wallThickness, radius - wallThickness, height, 64, 1, true]} />
+        <meshStandardMaterial color="#e8e8e8" roughness={0.3} side={THREE.BackSide} />
+      </mesh>
+      {/* Top ring */}
+      <mesh position={[0, height / 2, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[radius - wallThickness, radius, 64]} />
+        <meshStandardMaterial color="#f5f5f5" roughness={0.3} />
+      </mesh>
+    </group>
+  );
+}
+
+// Square Ventilation frame (Lüfterrahmen) - metallic frame
+function SquareVentilationFrame({ 
   size, 
   type 
 }: { 
@@ -157,6 +185,36 @@ function VentilationFrame({
   );
 }
 
+// Round Ventilation frame (Lüfterrahmen) - circular metallic frame
+function RoundVentilationFrame({ 
+  radius, 
+  type 
+}: { 
+  radius: number; 
+  type: '230v' | '24v';
+}) {
+  const frameHeight = 0.04;
+  const frameThickness = 0.025;
+  
+  const color = type === '24v' ? '#2a3f5f' : '#4a5568';
+
+  return (
+    <group position={[0, frameHeight / 2, 0]}>
+      {/* Circular metal frame */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[radius, frameThickness / 2, 8, 64]} />
+        <meshStandardMaterial color={color} metalness={0.8} roughness={0.2} />
+      </mesh>
+      
+      {/* Hinge indicator */}
+      <mesh position={[0, frameHeight / 2 + 0.01, -radius + 0.02]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.008, 0.008, radius * 1.6, 16]} />
+        <meshStandardMaterial color="#1a1a1a" metalness={0.9} roughness={0.1} />
+      </mesh>
+    </group>
+  );
+}
+
 export function SkylightModel3D({
   groesse,
   material,
@@ -164,6 +222,8 @@ export function SkylightModel3D({
   shells,
   kranzHeight,
   luefterrahmen,
+  shape = 'square',
+  showCurb = true,
 }: SkylightModel3DProps) {
   const groupRef = useRef<THREE.Group>(null);
   
@@ -184,14 +244,26 @@ export function SkylightModel3D({
     }
   });
 
+  const isRound = shape === 'round';
+
   return (
     <group ref={groupRef}>
-      {/* Mounting Curb (Aufsatzkranz) */}
-      <MountingCurb size={normalizedSize} height={normalizedKranzHeight} />
+      {/* Mounting Curb (Aufsatzkranz) - only if showCurb is true */}
+      {showCurb && (
+        isRound ? (
+          <RoundMountingCurb radius={normalizedSize * 0.5} height={normalizedKranzHeight} />
+        ) : (
+          <SquareMountingCurb size={normalizedSize} height={normalizedKranzHeight} />
+        )
+      )}
       
       {/* Ventilation Frame (if not fixed glazing) */}
       {luefterrahmen !== 'festverglast' && (
-        <VentilationFrame size={normalizedSize} type={luefterrahmen} />
+        isRound ? (
+          <RoundVentilationFrame radius={normalizedSize * 0.5} type={luefterrahmen} />
+        ) : (
+          <SquareVentilationFrame size={normalizedSize} type={luefterrahmen} />
+        )
       )}
       
       {/* Dome Shells */}
@@ -208,11 +280,18 @@ export function SkylightModel3D({
         ))}
       </group>
       
-      {/* Base ring at dome-curb junction */}
-      <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[normalizedSize * 0.48, normalizedSize * 0.5, 64]} />
-        <meshStandardMaterial color="#888888" metalness={0.5} roughness={0.3} />
-      </mesh>
+      {/* Base ring at dome junction */}
+      {isRound ? (
+        <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[normalizedSize * 0.48, normalizedSize * 0.5, 64]} />
+          <meshStandardMaterial color="#888888" metalness={0.5} roughness={0.3} />
+        </mesh>
+      ) : (
+        <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[normalizedSize * 0.48, normalizedSize * 0.5, 64]} />
+          <meshStandardMaterial color="#888888" metalness={0.5} roughness={0.3} />
+        </mesh>
+      )}
     </group>
   );
 }

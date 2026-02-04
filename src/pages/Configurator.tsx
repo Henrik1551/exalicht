@@ -1,10 +1,10 @@
 import { Layout } from '@/components/layout/Layout';
-import { ConfiguratorPage } from '@/components/configurator/ConfiguratorPage';
+import { ConfiguratorSelection } from '@/components/configurator/ConfiguratorSelection';
 
 export default function Configurator() {
   return (
     <Layout>
-      <ConfiguratorPage />
+      <ConfiguratorSelection />
     </Layout>
   );
 }
