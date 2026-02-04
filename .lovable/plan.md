@@ -1,147 +1,54 @@
 
-# Konfigurator Umbau: Neue Struktur nach Vorgabe
+# Fehlende Preisdaten für 80x80 und 110x110 Lichtkuppeln
 
-## Übersicht der Änderungen
+## Aktuelle Datenlage
 
-Der Konfigurator wird gemäß der vorgegebenen Struktur umgebaut:
-
-| Aktuell | Neu |
-|---------|-----|
-| Kombinierte Größenauswahl (80x80, 100x100...) | Separate Länge + Breite Auswahl |
-| Material: AC, HS, PC | Material: Acryl, Heatstop, Polycarbonat + Optik (klar/opal) |
-| 4 Lüfterrahmen-Optionen | 3 Optionen (festverglast, 230V, 24V) |
-| Kranz als Option ein/aus | Kranz immer dabei mit Höhenauswahl |
-
----
-
-## Neue Konfigurator-Struktur
-
-### 1. Maße [ULW] - Innenlichtweite
-
-**Länge** (Zeilen-Buttons):
-- 80 cm
-- 100 cm
-- 110 cm
-- 180 cm
-
-**Breite** (Zeilen-Buttons):
-- 180 cm
-
-Logik: Breite >= Länge (oder alle Kombinationen erlaubt)
-
-### 2. OBERSCHALE (Material & Optik)
-
-**Material** (Radio-Buttons):
-- Acryl (Standard)
-- Heatstop (wärmereflektierend)
-- Polycarbonat (schlagfest)
-
-**Optik** (Radio-Buttons):
-- klar (transparent)
-- opal (Milchglas)
-
-**Schale** (1-5):
-- 1-schalig
-- 2-schalig
-- 3-schalig
-- 4-schalig
-- 5-schalig
-
-### 3. AUFSATZKRANZ
-
-**Höhe** (Radio-Buttons):
-- 15 cm
-- 30 cm
-- 50 cm
-
-### 4. Lüfterrahmen (optional)
-
-**Varianten** (Radio-Buttons):
-- festverglast (nicht zu öffnen)
-- elektrisch öffenbar (230V Antrieb)
-- elektrisch öffenbar (24V RWA-Antrieb)
+| Größe | Lichtkuppeln | Aufsatzkränze | Status |
+|-------|--------------|---------------|--------|
+| 80x80 | 0 | 0 | **Fehlt komplett** |
+| 100x100 | 15 | 7 | ✅ Vorhanden |
+| 110x110 | 0 | 0 | **Fehlt komplett** |
+| 120x120 | 5 | 3 | Vorhanden (nicht im Konfigurator) |
+| 150x150 | 5 | 3 | Vorhanden (nicht im Konfigurator) |
 
 ---
 
-## Technische Änderungen
+## Lösungsoptionen
 
-### ConfigSelection Interface (aktualisiert)
+### Option A: Manuelle Dateneingabe via SQL
 
-```typescript
-interface ConfigSelection {
-  // Maße - separat statt kombiniert
-  laenge: number;      // 80, 100, 110, 180
-  breite: number;      // 80, 100, 110, 180
-  
-  // Oberschale
-  material: 'acryl' | 'heatstop' | 'polycarbonat';
-  optik: 'klar' | 'opal';
-  shells: 1 | 2 | 3 | 4 | 5;
-  
-  // Aufsatzkranz
-  kranzHeight: 15 | 30 | 50;
-  
-  // Lüfterrahmen
-  luefterrahmen: 'festverglast' | '230v' | '24v';
-  
-  // Menge
-  quantity: number;
-}
-```
+Da keine Markdown-Exportdateien mit 80x80 und 110x110 Daten vorliegen, können wir die Preisdaten direkt in die Datenbank einfügen. Dafür benötigen wir die Preisliste.
 
-### Neue Konstanten
+**Benötigte Informationen:**
+- Preise für 80x80 cm Lichtkuppeln (AC/HS/PC, 1-5 schalig)
+- Preise für 110x110 cm Lichtkuppeln (AC/HS/PC, 1-5 schalig)
+- Preise für entsprechende Aufsatzkränze (15/30/50 cm Höhe)
 
-```typescript
-const AVAILABLE_LAENGEN = [80, 100, 110, 180];
-const AVAILABLE_BREITEN = [180]; // Aktuell nur 180 verfügbar
-const SHELL_OPTIONS = [1, 2, 3, 4, 5];
-const KRANZ_HEIGHTS = [15, 30, 50];
-```
+### Option B: Preise aus vorhandenen Daten interpolieren
 
-### UI-Layout
+Basierend auf den vorhandenen Preisen für 100x100, 120x120 und 150x150 können wir die fehlenden Größen schätzen:
 
-```text
-+------------------------------------------+
-|  MASSE [ULW]                             |
-|  Länge:  [80] [100] [110] [180]          |
-|  Breite: [180]                           |
-+------------------------------------------+
-|  OBERSCHALE (Material & Optik)           |
-|  Material: [Acryl] [Heatstop] [PC]       |
-|  Optik:    [klar] [opal]                 |
-|  Schale:   [1] [2] [3] [4] [5]           |
-+------------------------------------------+
-|  AUFSATZKRANZ                            |
-|  Höhe:     [15cm] [30cm] [50cm]          |
-+------------------------------------------+
-|  LÜFTERRAHMEN (optional)                 |
-|  [festverglast] [230V] [24V RWA]         |
-+------------------------------------------+
-```
+**Beispielrechnung (100x100 AC 1-schalig = 141,90€):**
+- 80x80 wäre kleiner → geschätzt ~90-100€
+- 110x110 wäre größer → geschätzt ~160-180€
+
+### Option C: Markdown-Dateien mit fehlenden Größen importieren
+
+Falls Preislisten-Dateien für 80x80 und 110x110 existieren, können diese über die Admin-Seite `/admin/configurator-import` hochgeladen werden.
 
 ---
 
-## Dateien die geändert werden
+## Empfohlene Vorgehensweise
 
-| Datei | Änderung |
-|-------|----------|
-| `src/components/configurator/ConfiguratorPage.tsx` | Kompletter Umbau der UI und Logik |
+1. **Prüfen Sie, ob Preislisten-Dateien für 80x80 und 110x110 verfügbar sind**
+2. Falls ja: Import über `/admin/configurator-import`
+3. Falls nein: Teilen Sie die Preise mit mir, und ich füge sie direkt in die Datenbank ein
 
 ---
 
-## Entfernte Features (vereinfacht)
+## Nächste Schritte
 
-- Form-Auswahl (rund/rechteckig) - nur rechteckig
-- Kranz ein/aus Toggle - immer dabei
-- Wandstärke-Auswahl - vereinfacht
-- Durchsturzsicherung - entfernt (kann später hinzugefügt werden)
-- Vormontage-Option - entfernt
-
-## Datenbank-Mapping
-
-Die vorhandenen Daten in der Datenbank verwenden:
-- `width_cm` und `length_cm` für Maße
-- `material` mit Werten 'AC', 'HS', 'PC' (wird gemappt zu acryl/heatstop/polycarbonat)
-- `shells` für Schalenanzahl
-
-Die Preisabfrage wird entsprechend angepasst, um die neuen separaten Länge/Breite-Felder zu verwenden.
+Bitte teilen Sie mir mit:
+- Haben Sie Markdown-Dateien mit den Preisen für 80x80 und 110x110?
+- Oder sollen die Preise manuell eingegeben werden? Falls ja, bitte die Preisliste bereitstellen.
+- Sollen wir die Preise basierend auf den vorhandenen Daten interpolieren?
