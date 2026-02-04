@@ -3,7 +3,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useConfiguratorItems } from '@/hooks/useConfiguratorItems';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
@@ -13,7 +12,7 @@ import { ShoppingCart, Info, Loader2, RefreshCw, AlertCircle } from 'lucide-reac
 import { formatPrice } from '@/lib/order-utils';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
-
+import { Skylight3DViewer } from './Skylight3DViewer';
 // Simplified interface - only square sizes allowed
 interface ConfigSelection {
   groesse: 80 | 100 | 110 | 180;  // Single size value for square dimensions
@@ -194,6 +193,17 @@ export function ConfiguratorPage() {
         </p>
       </div>
 
+      {/* 3D Preview */}
+      <div className="mb-8 relative">
+        <Skylight3DViewer
+          groesse={selection.groesse}
+          material={selection.material}
+          optik={selection.optik}
+          shells={selection.shells}
+          kranzHeight={selection.kranzHeight}
+          luefterrahmen={selection.luefterrahmen}
+        />
+      </div>
       {/* Warning if no products found */}
       {!hasProducts && !isLoading && (
         <Alert className="mb-6 border-amber-500 bg-amber-50 dark:bg-amber-950/20">
