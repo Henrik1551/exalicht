@@ -175,6 +175,7 @@ export type Database = {
           product_type: string | null
           short_description: string | null
           sku: string | null
+          stock_quantity: number | null
           updated_at: string
           weight_kg: number | null
           woo_id: number | null
@@ -195,6 +196,7 @@ export type Database = {
           product_type?: string | null
           short_description?: string | null
           sku?: string | null
+          stock_quantity?: number | null
           updated_at?: string
           weight_kg?: number | null
           woo_id?: number | null
@@ -215,6 +217,7 @@ export type Database = {
           product_type?: string | null
           short_description?: string | null
           sku?: string | null
+          stock_quantity?: number | null
           updated_at?: string
           weight_kg?: number | null
           woo_id?: number | null
