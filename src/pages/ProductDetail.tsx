@@ -259,15 +259,23 @@ const ProductDetail = () => {
             {/* Price */}
             <div className="py-4 border-y border-border">
               {priceRange && priceRange.min !== priceRange.max ? (
-                <div className="flex items-baseline gap-2">
+                <div className="flex flex-col">
                   <span className="text-3xl font-bold text-foreground">
                     {formatPrice(priceRange.min)} – {formatPrice(priceRange.max)}
                   </span>
+                  <span className="text-sm text-muted-foreground mt-1">
+                    {language === 'de' ? 'zzgl. MwSt. zzgl. Versandkosten' : 'excl. VAT, plus shipping'}
+                  </span>
                 </div>
               ) : product.price ? (
-                <span className="text-3xl font-bold text-foreground">
-                  {formatPrice(product.price)}
-                </span>
+                <div className="flex flex-col">
+                  <span className="text-3xl font-bold text-foreground">
+                    {formatPrice(product.price)}
+                  </span>
+                  <span className="text-sm text-muted-foreground mt-1">
+                    {language === 'de' ? 'zzgl. MwSt. zzgl. Versandkosten' : 'excl. VAT, plus shipping'}
+                  </span>
+                </div>
               ) : (
                 <span className="text-lg text-muted-foreground italic">
                   {language === 'de' ? 'Preis auf Anfrage' : 'Price on request'}
