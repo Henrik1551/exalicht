@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Product } from '@/lib/products-data';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { stripHtml, truncateText } from '@/lib/html-utils';
 
 interface ProductCardProps {
   product: Product;
@@ -18,6 +19,9 @@ export function ProductCard({ product }: ProductCardProps) {
       currency: 'EUR',
     }).format(price);
   };
+
+  // Clean HTML from description
+  const cleanDescription = truncateText(stripHtml(product.description), 100);
 
   return (
     <div className="group bg-card border border-border rounded-xl overflow-hidden hover:shadow-lg hover:border-primary/30 transition-all duration-300">
@@ -85,7 +89,7 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
 
         <p className="text-sm text-muted-foreground line-clamp-2">
-          {product.description}
+          {cleanDescription || (language === 'de' ? 'Keine Beschreibung' : 'No description')}
         </p>
 
         {/* Features */}
@@ -97,16 +101,21 @@ export function ProductCard({ product }: ProductCardProps) {
           ))}
         </div>
 
-        {/* Price */}
         <div className="flex items-center justify-between pt-2 border-t border-border">
           <div>
-            {product.maxPrice ? (
-              <span className="font-bold text-lg text-foreground">
-                {formatPrice(product.minPrice)} – {formatPrice(product.maxPrice)}
-              </span>
+            {product.minPrice > 0 ? (
+              product.maxPrice && product.maxPrice !== product.minPrice ? (
+                <span className="font-bold text-lg text-foreground">
+                  {formatPrice(product.minPrice)} – {formatPrice(product.maxPrice)}
+                </span>
+              ) : (
+                <span className="font-bold text-lg text-foreground">
+                  {formatPrice(product.minPrice)}
+                </span>
+              )
             ) : (
-              <span className="font-bold text-lg text-foreground">
-                {formatPrice(product.minPrice)}
+              <span className="text-sm text-muted-foreground italic">
+                {language === 'de' ? 'Preis auf Anfrage' : 'Price on request'}
               </span>
             )}
           </div>

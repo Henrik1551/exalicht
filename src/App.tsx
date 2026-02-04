@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
+import ProductDetail from "./pages/ProductDetail";
 import AdminImport from "./pages/admin/Import";
 import NotFound from "./pages/NotFound";
 
@@ -21,6 +22,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/products" element={<Products />} />
+            <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/admin/import" element={<AdminImport />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
