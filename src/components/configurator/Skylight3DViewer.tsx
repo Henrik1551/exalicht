@@ -11,7 +11,7 @@ interface Skylight3DViewerProps {
   optik: 'klar' | 'opal';
   shells: 1 | 2 | 3 | 4 | 5;
   kranzHeight: 15 | 30 | 50;
-  luefterrahmen: 'festverglast' | '230v' | '24v';
+  luefterrahmen: 'festverglast' | 'spindel' | '230v' | '24v';
   shape?: SkylightShape;
   showCurb?: boolean;
 }

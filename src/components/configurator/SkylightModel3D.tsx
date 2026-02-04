@@ -10,7 +10,7 @@ interface SkylightModel3DProps {
   optik: 'klar' | 'opal';
   shells: 1 | 2 | 3 | 4 | 5;
   kranzHeight: 15 | 30 | 50;
-  luefterrahmen: 'festverglast' | '230v' | '24v';
+  luefterrahmen: 'festverglast' | 'spindel' | '230v' | '24v';
   shape?: SkylightShape;
   showCurb?: boolean;
 }
@@ -144,13 +144,13 @@ function SquareVentilationFrame({
   type 
 }: { 
   size: number; 
-  type: '230v' | '24v';
+  type: 'spindel' | '230v' | '24v';
 }) {
   const frameHeight = 0.04;
   const frameThickness = 0.025;
   
   // Different colors for different types
-  const color = type === '24v' ? '#2a3f5f' : '#4a5568';
+  const color = type === '24v' ? '#2a3f5f' : type === 'spindel' ? '#5a5a5a' : '#4a5568';
 
   return (
     <group position={[0, frameHeight / 2, 0]}>
@@ -191,12 +191,12 @@ function RoundVentilationFrame({
   type 
 }: { 
   radius: number; 
-  type: '230v' | '24v';
+  type: 'spindel' | '230v' | '24v';
 }) {
   const frameHeight = 0.04;
   const frameThickness = 0.025;
   
-  const color = type === '24v' ? '#2a3f5f' : '#4a5568';
+  const color = type === '24v' ? '#2a3f5f' : type === 'spindel' ? '#5a5a5a' : '#4a5568';
 
   return (
     <group position={[0, frameHeight / 2, 0]}>
@@ -260,9 +260,9 @@ export function SkylightModel3D({
       {/* Ventilation Frame (if not fixed glazing) */}
       {luefterrahmen !== 'festverglast' && (
         isRound ? (
-          <RoundVentilationFrame radius={normalizedSize * 0.5} type={luefterrahmen} />
+          <RoundVentilationFrame radius={normalizedSize * 0.5} type={luefterrahmen as 'spindel' | '230v' | '24v'} />
         ) : (
-          <SquareVentilationFrame size={normalizedSize} type={luefterrahmen} />
+          <SquareVentilationFrame size={normalizedSize} type={luefterrahmen as 'spindel' | '230v' | '24v'} />
         )
       )}
       

@@ -38,9 +38,9 @@ interface ConfiguratorSummaryProps {
   showKranz?: boolean;
 }
 
-const formatPriceOrNA = (price: number, found: boolean) => {
+const formatPriceDisplay = (price: number, found: boolean) => {
   if (!found && price === 0) return 'auf Anfrage';
-  return formatPrice(price);
+  return price.toFixed(2).replace('.', ',');
 };
 
 export function ConfiguratorSummary({
@@ -59,7 +59,7 @@ export function ConfiguratorSummary({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Info className="h-5 w-5" />
-          {language === 'de' ? 'Zusammenfassung' : 'Summary'}
+          {language === 'de' ? 'Preisübersicht' : 'Price Overview'}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -97,41 +97,64 @@ export function ConfiguratorSummary({
 
             <Separator />
 
-            {/* Price Breakdown */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Lichtkuppel:</span>
-                <span className={!prices.lichtkuppelFound ? 'text-amber-600' : ''}>
-                  {formatPriceOrNA(prices.lichtkuppel, prices.lichtkuppelFound)}
-                </span>
+            {/* Price Input Fields - Old Style */}
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="lichtkuppel-price" className="text-sm">
+                  Lichtkuppel Preis (€)
+                </Label>
+                <Input
+                  id="lichtkuppel-price"
+                  type="text"
+                  readOnly
+                  value={formatPriceDisplay(prices.lichtkuppel, prices.lichtkuppelFound)}
+                  className={`bg-muted ${!prices.lichtkuppelFound ? 'text-amber-600' : ''}`}
+                />
               </div>
-              {showKranz && prices.kranz !== undefined && (
-                <div className="flex justify-between text-sm">
-                  <span>Aufsatzkranz:</span>
-                  <span className={!prices.kranzFound ? 'text-amber-600' : ''}>
-                    {formatPriceOrNA(prices.kranz, prices.kranzFound ?? false)}
-                  </span>
+
+              {showKranz && (
+                <div className="space-y-1">
+                  <Label htmlFor="kranz-price" className="text-sm">
+                    Aufsatzkranz Preis (€)
+                  </Label>
+                  <Input
+                    id="kranz-price"
+                    type="text"
+                    readOnly
+                    value={formatPriceDisplay(prices.kranz ?? 0, prices.kranzFound ?? false)}
+                    className={`bg-muted ${!prices.kranzFound ? 'text-amber-600' : ''}`}
+                  />
                 </div>
               )}
-              {prices.luefter > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span>Lüfterrahmen:</span>
-                  <span className={!prices.luefterFound ? 'text-amber-600' : ''}>
-                    {formatPriceOrNA(prices.luefter, prices.luefterFound)}
-                  </span>
-                </div>
-              )}
+
+              <div className="space-y-1">
+                <Label htmlFor="luefter-price" className="text-sm">
+                  Lüfterrahmen Preis (€)
+                </Label>
+                <Input
+                  id="luefter-price"
+                  type="text"
+                  readOnly
+                  value={formatPriceDisplay(prices.luefter, prices.luefterFound)}
+                  className={`bg-muted ${!prices.luefterFound ? 'text-amber-600' : ''}`}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="zusatz-price" className="text-sm">
+                  Zusatzkosten (€)
+                </Label>
+                <Input
+                  id="zusatz-price"
+                  type="text"
+                  readOnly
+                  value="0,00"
+                  className="bg-muted"
+                />
+              </div>
             </div>
 
             <Separator />
-
-            {/* Unit Price */}
-            <div className="flex justify-between font-medium">
-              <span>{language === 'de' ? 'Stückpreis' : 'Unit Price'}:</span>
-              <span className={!prices.lichtkuppelFound ? 'text-amber-600' : ''}>
-                {prices.lichtkuppelFound ? formatPrice(prices.unitTotal) : 'auf Anfrage'}
-              </span>
-            </div>
 
             {/* Quantity */}
             <div className="flex items-center gap-4">

@@ -21,12 +21,13 @@ export interface BaseConfigSelection {
   optik: 'klar' | 'opal';
   shells: 1 | 2 | 3 | 4 | 5;
   kranzHeight: 15 | 30 | 50;
-  luefterrahmen: 'festverglast' | '230v' | '24v';
+  luefterrahmen: 'festverglast' | 'spindel' | '230v' | '24v';
   quantity: number;
 }
 
 export interface SquareConfigSelection extends BaseConfigSelection {
-  groesse: 80 | 100 | 110 | 180;
+  laenge: 80 | 100 | 110 | 180;
+  breite: 80 | 100 | 110 | 180;
 }
 
 export interface RoundConfigSelection extends BaseConfigSelection {
@@ -35,7 +36,7 @@ export interface RoundConfigSelection extends BaseConfigSelection {
 
 const SHELL_OPTIONS: (1 | 2 | 3 | 4 | 5)[] = [1, 2, 3, 4, 5];
 const KRANZ_HEIGHTS: (15 | 30 | 50)[] = [15, 30, 50];
-const SQUARE_SIZES: (80 | 100 | 110 | 180)[] = [80, 100, 110, 180];
+const SQUARE_DIMENSIONS: (80 | 100 | 110 | 180)[] = [80, 100, 110, 180];
 const ROUND_DIAMETERS: (60 | 80 | 100 | 120 | 150)[] = [60, 80, 100, 120, 150];
 
 const MATERIAL_MAP: Record<BaseConfigSelection['material'], string> = {
@@ -56,7 +57,7 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
   const { addItem } = useCart();
 
   const defaultSelection = shape === 'square' 
-    ? { groesse: 100 as const, material: 'acryl' as const, optik: 'klar' as const, shells: 2 as const, kranzHeight: 30 as const, luefterrahmen: 'festverglast' as const, quantity: 1 }
+    ? { laenge: 100 as const, breite: 100 as const, material: 'acryl' as const, optik: 'klar' as const, shells: 2 as const, kranzHeight: 30 as const, luefterrahmen: 'festverglast' as const, quantity: 1 }
     : { diameter: 100 as const, material: 'acryl' as const, optik: 'klar' as const, shells: 2 as const, kranzHeight: 30 as const, luefterrahmen: 'festverglast' as const, quantity: 1 };
 
   const [selection, setSelection] = useState<SquareConfigSelection | RoundConfigSelection>(defaultSelection as any);
@@ -67,38 +68,38 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
 
   const isLoading = loadingLK || loadingKranz || loadingLuefter;
 
-  const getSize = () => {
-    if (shape === 'square') {
-      return (selection as SquareConfigSelection).groesse;
-    }
-    return (selection as RoundConfigSelection).diameter;
-  };
+  const getLaenge = () => shape === 'square' ? (selection as SquareConfigSelection).laenge : 0;
+  const getBreite = () => shape === 'square' ? (selection as SquareConfigSelection).breite : 0;
+  const getDiameter = () => shape === 'round' ? (selection as RoundConfigSelection).diameter : 0;
 
   const getSizeLabel = () => {
-    const size = getSize();
     if (shape === 'square') {
-      return `${size} x ${size} cm`;
+      const l = getLaenge();
+      const b = getBreite();
+      return `${l} x ${b} cm`;
     }
-    return `Ø ${size} cm`;
+    return `Ø ${getDiameter()} cm`;
   };
 
   const prices = useMemo(() => {
     const dbMaterial = MATERIAL_MAP[selection.material];
-    const size = getSize();
+    const laenge = getLaenge();
+    const breite = getBreite();
+    const diameter = getDiameter();
 
     // Find matching Lichtkuppel
     let lkItem;
     if (shape === 'square') {
       lkItem = lichtkuppelItems?.find(item =>
-        item.width_cm === size &&
-        item.length_cm === size &&
+        item.width_cm === breite &&
+        item.length_cm === laenge &&
         item.material === dbMaterial &&
         item.shells === selection.shells
       );
     } else {
       // For round, we use diameter_cm
       lkItem = lichtkuppelItems?.find(item =>
-        item.diameter_cm === size &&
+        item.diameter_cm === diameter &&
         item.material === dbMaterial &&
         item.shells === selection.shells
       );
@@ -109,13 +110,13 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
     if (withCurb) {
       if (shape === 'square') {
         kranzItem = kranzItems?.find(item =>
-          item.width_cm === size &&
-          item.length_cm === size &&
+          item.width_cm === breite &&
+          item.length_cm === laenge &&
           item.height_cm === selection.kranzHeight
         );
       } else {
         kranzItem = kranzItems?.find(item =>
-          item.diameter_cm === size &&
+          item.diameter_cm === diameter &&
           item.height_cm === selection.kranzHeight
         );
       }
@@ -123,15 +124,15 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
 
     // Find matching Lüfterrahmen
     let luefterItem = null;
-    if (selection.luefterrahmen !== 'festverglast') {
+    if (selection.luefterrahmen !== 'festverglast' && selection.luefterrahmen !== 'spindel') {
       if (shape === 'square') {
         luefterItem = luefterItems?.find(item =>
-          item.width_cm === size &&
-          item.length_cm === size
+          item.width_cm === breite &&
+          item.length_cm === laenge
         );
       } else {
         luefterItem = luefterItems?.find(item =>
-          item.diameter_cm === size
+          item.diameter_cm === diameter
         );
       }
     }
@@ -151,9 +152,9 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
       total,
       lichtkuppelFound: !!lkItem,
       kranzFound: withCurb ? !!kranzItem : undefined,
-      luefterFound: selection.luefterrahmen === 'festverglast' || !!luefterItem,
+      luefterFound: selection.luefterrahmen === 'festverglast' || selection.luefterrahmen === 'spindel' || !!luefterItem,
     };
-  }, [selection, lichtkuppelItems, kranzItems, luefterItems, shape, withCurb]);
+  }, [selection, lichtkuppelItems, kranzItems, luefterItems, shape, withCurb, getLaenge, getBreite, getDiameter]);
 
   const hasProducts = lichtkuppelItems && lichtkuppelItems.length > 0;
 
@@ -168,7 +169,7 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
   };
 
   const getLuefterrahmenLabel = (type: BaseConfigSelection['luefterrahmen']) => {
-    const labels = { festverglast: 'festverglast', '230v': '230V Antrieb', '24v': '24V RWA-Antrieb' };
+    const labels = { festverglast: 'festverglast', spindel: 'Spindel', '230v': '230V Antrieb', '24v': '24V RWA-Antrieb' };
     return labels[type];
   };
 
@@ -176,8 +177,8 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
     const sizeLabel = getSizeLabel();
     const configName = `Lichtkuppel ${sizeLabel}`;
     const configSku = shape === 'square'
-      ? `KONFIG-${getSize()}x${getSize()}-${MATERIAL_MAP[selection.material]}-${selection.shells}S`
-      : `KONFIG-R${getSize()}-${MATERIAL_MAP[selection.material]}-${selection.shells}S`;
+      ? `KONFIG-${getLaenge()}x${getBreite()}-${MATERIAL_MAP[selection.material]}-${selection.shells}S`
+      : `KONFIG-R${getDiameter()}-${MATERIAL_MAP[selection.material]}-${selection.shells}S`;
 
     addItem({
       productId: `config-${Date.now()}`,
@@ -196,11 +197,10 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
 
   // Convert to 3D viewer props
   const get3DViewerProps = () => {
-    const size = getSize();
-    // Map to the expected groesse type for viewer
+    // Map to the expected groesse type for viewer (use laenge for square)
     const groesse = shape === 'square' 
-      ? (size as 80 | 100 | 110 | 180)
-      : (size <= 80 ? 80 : size <= 100 ? 100 : size <= 110 ? 110 : 180) as 80 | 100 | 110 | 180;
+      ? (getLaenge() as 80 | 100 | 110 | 180)
+      : (getDiameter() <= 80 ? 80 : getDiameter() <= 100 ? 100 : getDiameter() <= 110 ? 110 : 180) as 80 | 100 | 110 | 180;
     
     return {
       groesse,
@@ -282,23 +282,58 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">
-                  {language === 'de' ? 'Größe' : 'Size'} <span className="text-destructive">*</span>
-                </Label>
-                <div className="flex flex-wrap gap-2">
-                  {shape === 'square' ? (
-                    SQUARE_SIZES.map(size => (
-                      <OptionButton
-                        key={size}
-                        selected={(selection as SquareConfigSelection).groesse === size}
-                        onClick={() => setSelection(s => ({ ...s, groesse: size }))}
-                      >
-                        {size} x {size} cm
-                      </OptionButton>
-                    ))
-                  ) : (
-                    ROUND_DIAMETERS.map(d => (
+              {shape === 'square' ? (
+                <>
+                  {/* Länge */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                      {language === 'de' ? 'Länge' : 'Length'} <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      {SQUARE_DIMENSIONS.map(size => (
+                        <OptionButton
+                          key={size}
+                          selected={(selection as SquareConfigSelection).laenge === size}
+                          onClick={() => {
+                            const newSelection = { ...selection, laenge: size } as SquareConfigSelection;
+                            // If breite > laenge, adjust breite
+                            if (newSelection.breite > size) {
+                              newSelection.breite = size;
+                            }
+                            setSelection(newSelection);
+                          }}
+                        >
+                          {size} cm
+                        </OptionButton>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Breite */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                      {language === 'de' ? 'Breite' : 'Width'} <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      {SQUARE_DIMENSIONS.filter(size => size <= getLaenge()).map(size => (
+                        <OptionButton
+                          key={size}
+                          selected={(selection as SquareConfigSelection).breite === size}
+                          onClick={() => setSelection(s => ({ ...s, breite: size }))}
+                        >
+                          {size} cm
+                        </OptionButton>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    {language === 'de' ? 'Durchmesser' : 'Diameter'} <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {ROUND_DIAMETERS.map(d => (
                       <OptionButton
                         key={d}
                         selected={(selection as RoundConfigSelection).diameter === d}
@@ -306,10 +341,10 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
                       >
                         Ø {d} cm
                       </OptionButton>
-                    ))
-                  )}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="pt-2 text-sm text-muted-foreground">
                 {language === 'de' ? 'Gewählte Größe:' : 'Selected size:'}{' '}
@@ -426,6 +461,18 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
                     ))}
                   </div>
                 </div>
+
+                {/* Dämmung - fest 20mm */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    {language === 'de' ? 'Dämmung' : 'Insulation'} <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    <OptionButton selected={true} onClick={() => {}}>
+                      20 mm
+                    </OptionButton>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -451,6 +498,12 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
                     onClick={() => setSelection(s => ({ ...s, luefterrahmen: 'festverglast' }))}
                   >
                     festverglast ({language === 'de' ? 'nicht zu öffnen' : 'fixed'})
+                  </OptionButton>
+                  <OptionButton
+                    selected={selection.luefterrahmen === 'spindel'}
+                    onClick={() => setSelection(s => ({ ...s, luefterrahmen: 'spindel' }))}
+                  >
+                    manuell öffenbar (Spindel)
                   </OptionButton>
                   <OptionButton
                     selected={selection.luefterrahmen === '230v'}
