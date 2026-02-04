@@ -162,4 +162,3 @@ Aktuell sind in der Datenbank keine runden Lichtkuppeln oder Aufsatzkränze vorh
 - Quadratische Lichtkuppeln: 100x100, 120x120, 150x150
 - Quadratische Aufsatzkränze: 100x100, 120x120, 150x150
 - Runde Lüfterrahmen: 60, 80, 100, 120, 150 cm (bereits vorhanden!)
-

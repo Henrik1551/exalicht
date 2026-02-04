@@ -1,7 +1,7 @@
 import { Suspense, memo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
-import { SkylightModel3D } from './SkylightModel3D';
+import { SkylightModel3D, SkylightShape } from './SkylightModel3D';
 import { Loader2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -12,6 +12,8 @@ interface Skylight3DViewerProps {
   shells: 1 | 2 | 3 | 4 | 5;
   kranzHeight: 15 | 30 | 50;
   luefterrahmen: 'festverglast' | '230v' | '24v';
+  shape?: SkylightShape;
+  showCurb?: boolean;
 }
 
 // Loading fallback
@@ -34,14 +36,17 @@ export const Skylight3DViewer = memo(function Skylight3DViewer({
   shells,
   kranzHeight,
   luefterrahmen,
+  shape = 'square',
+  showCurb = true,
 }: Skylight3DViewerProps) {
   const isMobile = useIsMobile();
   
-  // Adjust camera based on dome size
+  // Adjust camera based on dome size and whether curb is shown
   const cameraDistance = groesse > 150 ? 2.5 : 2;
+  const shadowY = showCurb ? -kranzHeight / 100 - 0.01 : -0.01;
 
   return (
-    <div className="w-full h-[300px] md:h-[400px] bg-gradient-to-b from-muted/40 to-muted/10 rounded-xl border overflow-hidden">
+    <div className="w-full h-[300px] md:h-[400px] bg-gradient-to-b from-muted/40 to-muted/10 rounded-xl border overflow-hidden relative">
       <Suspense fallback={<LoadingFallback />}>
         <Canvas
           camera={{ 
@@ -77,11 +82,13 @@ export const Skylight3DViewer = memo(function Skylight3DViewer({
             shells={shells}
             kranzHeight={kranzHeight}
             luefterrahmen={luefterrahmen}
+            shape={shape}
+            showCurb={showCurb}
           />
           
           {/* Ground shadow */}
           <ContactShadows
-            position={[0, -kranzHeight / 100 - 0.01, 0]}
+            position={[0, shadowY, 0]}
             opacity={0.4}
             scale={3}
             blur={2}
