@@ -135,6 +135,19 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
     }
   }, [roundLuefterOptions, selection.luefterrahmen]);
 
+  // Available Dämmung options depend on curb height (15cm → only 20mm)
+  const availableDaemmung = useMemo(() => {
+    if (selection.kranzHeight === 15) return [20] as (20 | 40 | 50 | 60 | 80 | 100)[];
+    return DAEMMUNG_OPTIONS;
+  }, [selection.kranzHeight]);
+
+  // When height changes and current Dämmung is no longer available, reset to 20mm
+  useEffect(() => {
+    if (!availableDaemmung.includes(selection.daemmung)) {
+      setSelection(s => ({ ...s, daemmung: 20 }));
+    }
+  }, [availableDaemmung, selection.daemmung]);
+
   const isLoading = shape === 'square'
     ? (loadingLK || loadingKranz || loadingLuefter)
     : loadingRoundPrice;
@@ -562,7 +575,7 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
                   </Label>
                   <div className="flex flex-wrap gap-2">
                     {shape === 'round' ? (
-                      DAEMMUNG_OPTIONS.map(d => (
+                      availableDaemmung.map(d => (
                         <OptionButton
                           key={d}
                           selected={selection.daemmung === d}
