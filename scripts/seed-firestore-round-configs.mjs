@@ -98,8 +98,10 @@ async function main() {
 
   console.log(`Writing ${rows.length} documents to round_config_prices...`);
 
-  // Batch write in groups of 500 (Firestore batch limit)
-  const BATCH_SIZE = 500;
+  // Smaller batch size + delay to avoid rate limiting
+  const BATCH_SIZE = 200;
+  const DELAY_MS = 500;
+
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const batch = db.batch();
     const chunk = rows.slice(i, i + BATCH_SIZE);
@@ -109,8 +111,24 @@ async function main() {
       batch.set(ref, row.data);
     }
 
-    await batch.commit();
+    // Retry up to 3 times per batch
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await batch.commit();
+        break;
+      } catch (err) {
+        if (attempt === 3) throw err;
+        console.log(`  Batch failed (attempt ${attempt}/3), retrying in ${attempt * 2}s...`);
+        await new Promise(r => setTimeout(r, attempt * 2000));
+      }
+    }
+
     console.log(`  Written ${Math.min(i + BATCH_SIZE, rows.length)} / ${rows.length}`);
+
+    // Small delay between batches to avoid overwhelming Firestore
+    if (i + BATCH_SIZE < rows.length) {
+      await new Promise(r => setTimeout(r, DELAY_MS));
+    }
   }
 
   // Write variants lookup documents
