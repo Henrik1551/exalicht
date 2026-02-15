@@ -7,8 +7,10 @@
  *
  * Usage:
  *   GOOGLE_APPLICATION_CREDENTIALS=path/to/serviceAccountKey.json \
- *   FIREBASE_PROJECT_ID=your-project-id \
  *   node scripts/seed-firestore-round-configs.mjs
+ *
+ * To skip already-written rows (e.g. resume after 20000):
+ *   SKIP=20000 GOOGLE_APPLICATION_CREDENTIALS=... node scripts/seed-firestore-round-configs.mjs
  *
  * The service account key can be downloaded from:
  *   Firebase Console → Project Settings → Service Accounts → Generate New Private Key
@@ -96,13 +98,17 @@ async function main() {
     variantsByDiameter.get(ulw).add(luefter);
   }
 
-  console.log(`Writing ${rows.length} documents to round_config_prices...`);
+  const SKIP = parseInt(process.env.SKIP || '0');
+  if (SKIP > 0) {
+    console.log(`Skipping first ${SKIP} rows (already written)...`);
+  }
+  console.log(`Writing ${rows.length - SKIP} documents to round_config_prices...`);
 
   // Smaller batch size + delay to avoid rate limiting
   const BATCH_SIZE = 200;
   const DELAY_MS = 500;
 
-  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+  for (let i = SKIP; i < rows.length; i += BATCH_SIZE) {
     const batch = db.batch();
     const chunk = rows.slice(i, i + BATCH_SIZE);
 
