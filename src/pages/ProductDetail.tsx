@@ -5,7 +5,8 @@ import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { supabase } from '@/integrations/supabase/client';
+import { doc, getDoc, collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { db } from '@/integrations/firebase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { stripHtml } from '@/lib/html-utils';
 
@@ -56,14 +57,11 @@ const ProductDetail = () => {
   const { data: product, isLoading, error } = useQuery({
     queryKey: ['product', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data;
+      if (!id) return null;
+      const docRef = doc(db, 'products', id);
+      const snapshot = await getDoc(docRef);
+      if (!snapshot.exists()) return null;
+      return { id: snapshot.id, ...snapshot.data() } as Record<string, unknown> & { id: string };
     },
     enabled: !!id,
   });
@@ -73,20 +71,20 @@ const ProductDetail = () => {
     queryKey: ['product-variations', product?.woo_id],
     queryFn: async () => {
       if (!product?.woo_id) return [];
-      
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('product_type', 'variation')
-        .order('price', { ascending: true });
 
-      if (error) throw error;
-      
-      // Filter variations that belong to this parent (by checking category path similarity)
-      return data?.filter(v => 
-        v.category_path === product.category_path || 
-        v.name.includes(product.name.split(' ')[0])
-      ) || [];
+      const q = query(
+        collection(db, 'products'),
+        where('product_type', '==', 'variation'),
+        orderBy('price', 'asc')
+      );
+      const snapshot = await getDocs(q);
+      const allVariations = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Record<string, unknown> & { id: string }));
+
+      // Filter variations that belong to this parent
+      return allVariations.filter(v =>
+        v.category_path === product.category_path ||
+        (typeof v.name === 'string' && typeof product.name === 'string' && v.name.includes((product.name as string).split(' ')[0]))
+      );
     },
     enabled: product?.product_type === 'variable',
   });

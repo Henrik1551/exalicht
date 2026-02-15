@@ -1,9 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { db } from '@/integrations/firebase/client';
+
+export type ConfiguratorCategory = 'lichtkuppel' | 'aufsatzkranz' | 'luefterrahmen' | 'durchsturzsicherung' | 'zubehoer';
 
 export interface ConfiguratorItem {
   id: string;
-  category: 'lichtkuppel' | 'aufsatzkranz' | 'luefterrahmen' | 'durchsturzsicherung' | 'zubehoer';
+  category: ConfiguratorCategory;
   article_number: string;
   name: string;
   description: string | null;
@@ -19,69 +22,31 @@ export interface ConfiguratorItem {
   form: string | null;
   purchase_price: number | null;
   sale_price: number;
+  price_unit: number;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
-
-export type ConfiguratorCategory = 'lichtkuppel' | 'aufsatzkranz' | 'luefterrahmen' | 'durchsturzsicherung' | 'zubehoer';
 
 export function useConfiguratorItems(category?: ConfiguratorCategory) {
   return useQuery({
     queryKey: ['configurator-items', category],
     queryFn: async () => {
-      let query = supabase
-        .from('configurator_items')
-        .select('*')
-        .eq('is_active', true);
+      if (!category) return [];
 
-      if (category) {
-        query = query.eq('category', category as any);
-      }
+      const itemsRef = collection(db, 'configurator_items');
+      const q = query(
+        itemsRef,
+        where('category', '==', category),
+        where('is_active', '==', true),
+        orderBy('sale_price', 'asc')
+      );
 
-      const { data, error } = await query.order('sale_price', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching configurator items:', error);
-        throw error;
-      }
-
-      return (data || []) as ConfiguratorItem[];
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ConfiguratorItem));
     },
-    staleTime: 1000 * 60 * 5, // 5 Minuten - Cache wird nach 5 Minuten als veraltet betrachtet
-    refetchOnWindowFocus: true, // Daten werden beim Fokuswechsel aktualisiert
-  });
-}
-
-// Get unique sizes for a category
-export function useConfiguratorSizes(category: ConfiguratorCategory, form: 'rechteckig' | 'rund') {
-  return useQuery({
-    queryKey: ['configurator-sizes', category, form],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('configurator_items')
-        .select('width_cm, length_cm, diameter_cm')
-        .eq('category', category as any)
-        .eq('is_active', true);
-
-      if (error) throw error;
-
-      if (form === 'rund') {
-        // Get unique diameters
-        const diameters = [...new Set(data?.map(d => d.diameter_cm).filter(Boolean))].sort((a, b) => (a || 0) - (b || 0));
-        return diameters.map(d => ({ diameter_cm: d }));
-      } else {
-        // Get unique width x length combinations
-        const sizes = data?.reduce((acc, item) => {
-          if (item.width_cm && item.length_cm) {
-            const key = `${item.width_cm}x${item.length_cm}`;
-            if (!acc.find(s => `${s.width_cm}x${s.length_cm}` === key)) {
-              acc.push({ width_cm: item.width_cm, length_cm: item.length_cm });
-            }
-          }
-          return acc;
-        }, [] as { width_cm: number; length_cm: number }[]);
-        
-        return sizes?.sort((a, b) => (a.width_cm * a.length_cm) - (b.width_cm * b.length_cm)) || [];
-      }
-    },
+    enabled: !!category,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: true,
   });
 }

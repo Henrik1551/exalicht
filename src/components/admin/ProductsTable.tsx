@@ -29,7 +29,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, getDocs, doc, deleteDoc, orderBy, query } from 'firebase/firestore';
+import { db } from '@/integrations/firebase/client';
 import { formatPrice } from '@/lib/order-utils';
 import { Loader2, Search } from 'lucide-react';
 import { toast } from 'sonner';
@@ -65,13 +66,10 @@ export function ProductsTable() {
 
   const fetchProducts = async () => {
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, sku, price, in_stock, category, images, short_description, description, weight_kg, gtin, is_featured, stock_quantity')
-        .order('name');
-
-      if (error) throw error;
-      setProducts(data || []);
+      const q = query(collection(db, 'products'), orderBy('name'));
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+      setProducts(data);
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
@@ -98,12 +96,7 @@ export function ProductsTable() {
 
     setDeleting(true);
     try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', productToDelete.id);
-
-      if (error) throw error;
+      await deleteDoc(doc(db, 'products', productToDelete.id));
 
       toast.success(
         language === 'de'

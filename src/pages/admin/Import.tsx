@@ -7,7 +7,6 @@ import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 interface ImportResult {
   success: boolean;
@@ -83,17 +82,19 @@ const AdminImport = () => {
       const csvData = await file.text();
       setImportProgress(30);
 
-      const { data, error } = await supabase.functions.invoke('import-products', {
-        body: { csvData, clearExisting },
-      });
+      // Direct Firestore import is not yet implemented for products.
+      // The old Supabase edge function has been removed.
+      // TODO: Implement client-side CSV parsing + Firestore batch writes
+      const data: ImportResult = {
+        success: false,
+        totalParsed: 0,
+        inserted: 0,
+        categoriesCreated: 0,
+        errors: ['Product import needs to be re-implemented for Firebase. Use a Firestore seeding script instead.'],
+      };
 
       setImportProgress(100);
-
-      if (error) {
-        throw error;
-      }
-
-      setImportResult(data as ImportResult);
+      setImportResult(data);
 
       if (data.success) {
         toast({

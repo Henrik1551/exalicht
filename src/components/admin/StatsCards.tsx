@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Package, ShoppingCart, DollarSign, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/integrations/firebase/client';
 import { formatPrice } from '@/lib/order-utils';
 
 interface Stats {
@@ -26,20 +27,13 @@ export function StatsCards() {
     const fetchStats = async () => {
       try {
         // Fetch products count
-        const { count: productsCount } = await supabase
-          .from('products')
-          .select('*', { count: 'exact', head: true });
+        const productsSnapshot = await getDocs(collection(db, 'products'));
+        const productsCount = productsSnapshot.size;
 
-        // Fetch orders stats using raw query workaround
-        const ordersClient = supabase as unknown as {
-          from: (table: string) => {
-            select: (cols: string, opts?: { count: string; head: boolean }) => Promise<{ data: unknown[]; count: number | null; error: Error | null }>
-          }
-        };
+        // Fetch orders stats
+        const ordersSnapshot = await getDocs(collection(db, 'orders'));
+        const orders = ordersSnapshot.docs.map(d => d.data() as { status: string; total: number });
 
-        const { data: ordersData } = await ordersClient.from('orders').select('*');
-        const orders = (ordersData as Array<{ status: string; total: number }>) || [];
-        
         const totalOrders = orders.length;
         const pendingOrders = orders.filter(o => o.status === 'pending').length;
         const totalRevenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
@@ -48,7 +42,7 @@ export function StatsCards() {
           totalOrders,
           pendingOrders,
           totalRevenue,
-          totalProducts: productsCount || 0,
+          totalProducts: productsCount,
         });
       } catch (error) {
         console.error('Error fetching stats:', error);

@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/integrations/firebase/client';
 import { formatPrice, formatAddress, Address } from '@/lib/order-utils';
 import { Loader2 } from 'lucide-react';
 
@@ -31,30 +32,22 @@ export default function OrderConfirmation() {
     const fetchOrder = async () => {
       if (!orderNumber) return;
 
-      // Using raw query since types haven't been regenerated yet
-      const { data, error } = await (supabase as unknown as {
-        from: (table: string) => {
-          select: (cols: string) => {
-            eq: (col: string, val: string) => {
-              single: () => Promise<{ data: unknown; error: Error | null }>
-            }
-          }
-        }
-      }).from('orders').select('*').eq('order_number', orderNumber).single();
+      const q = query(collection(db, 'orders'), where('order_number', '==', orderNumber));
+      const snapshot = await getDocs(q);
 
-      if (error) {
-        console.error('Error fetching order:', error);
-      } else if (data) {
-        const orderData = data as Record<string, unknown>;
+      if (snapshot.empty) {
+        console.error('Order not found');
+      } else {
+        const data = snapshot.docs[0].data();
         setOrder({
-          order_number: orderData.order_number as string,
-          customer_name: orderData.customer_name as string,
-          customer_email: orderData.customer_email as string,
-          shipping_address: orderData.shipping_address as Address,
-          subtotal: orderData.subtotal as number,
-          tax_amount: orderData.tax_amount as number,
-          total: orderData.total as number,
-          created_at: orderData.created_at as string,
+          order_number: data.order_number,
+          customer_name: data.customer_name,
+          customer_email: data.customer_email,
+          shipping_address: data.shipping_address as Address,
+          subtotal: data.subtotal,
+          tax_amount: data.tax_amount,
+          total: data.total,
+          created_at: data.created_at,
         });
       }
       setLoading(false);

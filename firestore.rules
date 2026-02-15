@@ -1,0 +1,74 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check if user is authenticated
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Helper: check if user is admin
+    function isAdmin() {
+      return isAuth() &&
+        exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Products: public read, admin write
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Categories: public read, admin write
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Configurator items: public read, admin write
+    match /configurator_items/{itemId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Round config prices: public read, admin write
+    match /round_config_prices/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Round config variants (pre-computed lookup): public read, admin write
+    match /round_config_variants/{diamId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Orders: authenticated users can create, users can read own orders, admins can read/update all
+    match /orders/{orderId} {
+      allow create: if true; // Guest checkout allowed
+      allow read: if isAdmin() || (isAuth() && resource.data.user_id == request.auth.uid);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+
+      // Order items subcollection
+      match /items/{itemId} {
+        allow create: if true;
+        allow read: if isAdmin() || (isAuth() && get(/databases/$(database)/documents/orders/$(orderId)).data.user_id == request.auth.uid);
+      }
+    }
+
+    // Profiles: users can read/update their own, admins can read all
+    match /profiles/{userId} {
+      allow read: if isAuth() && (request.auth.uid == userId || isAdmin());
+      allow create: if isAuth() && request.auth.uid == userId;
+      allow update: if isAuth() && request.auth.uid == userId;
+    }
+
+    // User roles: admin only
+    match /user_roles/{userId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+  }
+}

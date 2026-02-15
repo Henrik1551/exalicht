@@ -25,7 +25,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, getDocs, doc, updateDoc, orderBy, query } from 'firebase/firestore';
+import { db } from '@/integrations/firebase/client';
 import { formatPrice, getStatusLabel, getStatusColor } from '@/lib/order-utils';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
@@ -51,21 +52,10 @@ export function OrdersTable() {
 
   const fetchOrders = async () => {
     try {
-      const ordersClient = supabase as unknown as {
-        from: (table: string) => {
-          select: (cols: string) => {
-            order: (col: string, opts: { ascending: boolean }) => Promise<{ data: Order[]; error: Error | null }>
-          }
-        }
-      };
-
-      const { data, error } = await ordersClient
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setOrders(data || []);
+      const q = query(collection(db, 'orders'), orderBy('created_at', 'desc'));
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Order));
+      setOrders(data);
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {
@@ -79,21 +69,7 @@ export function OrdersTable() {
 
   const updateStatus = async (orderId: string, newStatus: string) => {
     try {
-      const ordersClient = supabase as unknown as {
-        from: (table: string) => {
-          update: (data: { status: string }) => {
-            eq: (col: string, val: string) => Promise<{ error: Error | null }>
-          }
-        }
-      };
-
-      const { error } = await ordersClient
-        .from('orders')
-        .update({ status: newStatus })
-        .eq('id', orderId);
-
-      if (error) throw error;
-
+      await updateDoc(doc(db, 'orders', orderId), { status: newStatus });
       setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
 
       toast({

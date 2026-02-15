@@ -7,7 +7,6 @@ import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 interface ImportResult {
   success: boolean;
@@ -98,15 +97,20 @@ const ConfiguratorImport = () => {
 
       setImportProgress(30);
 
-      const { data, error } = await supabase.functions.invoke('import-configurator-items', {
-        body,
-      });
+      // Direct Firestore import is not yet implemented for configurator items.
+      // The old Supabase edge function has been removed.
+      // TODO: Implement client-side parsing + Firestore batch writes
+      const data: ImportResult = {
+        success: false,
+        totalParsed: 0,
+        uniqueItems: 0,
+        inserted: 0,
+        stats: { lichtkuppel: 0, aufsatzkranz: 0, luefterrahmen: 0, durchsturzsicherung: 0, zubehoer: 0 },
+        errors: ['Configurator import needs to be re-implemented for Firebase. Use the data seeding script instead.'],
+      };
 
       setImportProgress(100);
-
-      if (error) throw error;
-
-      setImportResult(data as ImportResult);
+      setImportResult(data);
 
       if (data.success) {
         toast({

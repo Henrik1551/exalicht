@@ -12,7 +12,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { supabase } from '@/integrations/supabase/client';
+import { doc, updateDoc, addDoc, collection } from 'firebase/firestore';
+import { db } from '@/integrations/firebase/client';
 import { toast } from 'sonner';
 
 interface Product {
@@ -117,8 +118,13 @@ export function ProductEditDialog({
       };
 
       if (isCreateMode) {
-        const { error } = await supabase.from('products').insert(productData);
-        if (error) throw error;
+        await addDoc(collection(db, 'products'), {
+          ...productData,
+          product_type: 'simple',
+          images: [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
         toast.success(
           language === 'de'
             ? 'Produkt erfolgreich erstellt'
@@ -126,11 +132,10 @@ export function ProductEditDialog({
         );
       } else {
         if (!product) return;
-        const { error } = await supabase
-          .from('products')
-          .update(productData)
-          .eq('id', product.id);
-        if (error) throw error;
+        await updateDoc(doc(db, 'products', product.id), {
+          ...productData,
+          updated_at: new Date().toISOString(),
+        });
         toast.success(
           language === 'de'
             ? 'Produkt erfolgreich aktualisiert'

@@ -1,4 +1,5 @@
-import { supabase } from '@/integrations/supabase/client';
+// Firecrawl API - direct HTTP calls (previously proxied through Supabase edge functions)
+// To use this, set VITE_FIRECRAWL_API_KEY in your .env file
 
 type FirecrawlResponse<T = unknown> = {
   success: boolean;
@@ -19,29 +20,36 @@ type MapOptions = {
   includeSubdomains?: boolean;
 };
 
+const FIRECRAWL_BASE = 'https://api.firecrawl.dev/v1';
+const getApiKey = () => import.meta.env.VITE_FIRECRAWL_API_KEY || '';
+
 export const firecrawlApi = {
   // Scrape a single URL
   async scrape(url: string, options?: ScrapeOptions): Promise<FirecrawlResponse> {
-    const { data, error } = await supabase.functions.invoke('firecrawl-scrape', {
-      body: { url, options },
-    });
-
-    if (error) {
-      return { success: false, error: error.message };
+    try {
+      const res = await fetch(`${FIRECRAWL_BASE}/scrape`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getApiKey()}` },
+        body: JSON.stringify({ url, ...options }),
+      });
+      return await res.json();
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
     }
-    return data;
   },
 
   // Map a website to discover all URLs
   async map(url: string, options?: MapOptions): Promise<FirecrawlResponse> {
-    const { data, error } = await supabase.functions.invoke('firecrawl-map', {
-      body: { url, options },
-    });
-
-    if (error) {
-      return { success: false, error: error.message };
+    try {
+      const res = await fetch(`${FIRECRAWL_BASE}/map`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getApiKey()}` },
+        body: JSON.stringify({ url, ...options }),
+      });
+      return await res.json();
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
     }
-    return data;
   },
 
   // Get all product URLs from lichtkuppel shop

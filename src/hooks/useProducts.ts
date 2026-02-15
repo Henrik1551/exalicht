@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { db } from '@/integrations/firebase/client';
 
 export interface Product {
   id: string;
@@ -39,52 +40,54 @@ export function useProducts(options?: {
   return useQuery({
     queryKey: ['products', options],
     queryFn: async () => {
-      let query = supabase
-        .from('products')
-        .select('*');
+      const productsRef = collection(db, 'products');
+      const constraints: ReturnType<typeof where>[] = [];
 
-      // Filter by category
-      if (options?.category && options.category !== 'all') {
-        query = query.or(`category.ilike.%${options.category}%,category_path.ilike.%${options.category}%`);
-      }
-
-      // Filter by product type (exclude variations by default for main listing)
+      // Filter by product type (exclude variations by default)
       if (options?.productType) {
-        query = query.eq('product_type', options.productType);
+        constraints.push(where('product_type', '==', options.productType));
       } else {
-        // By default, exclude variations (they should be shown with their parent)
-        query = query.neq('product_type', 'variation');
+        constraints.push(where('product_type', '!=', 'variation'));
       }
 
-      // Apply sorting
+      const q = query(productsRef, ...constraints);
+      const snapshot = await getDocs(q);
+      let products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+
+      // Filter by category (client-side since Firestore doesn't support ILIKE)
+      if (options?.category && options.category !== 'all') {
+        const cat = options.category.toLowerCase();
+        products = products.filter(p =>
+          (p.category && p.category.toLowerCase().includes(cat)) ||
+          (p.category_path && p.category_path.toLowerCase().includes(cat))
+        );
+      }
+
+      // Sort client-side
       switch (options?.sortBy) {
         case 'price-asc':
-          query = query.order('price', { ascending: true, nullsFirst: false });
+          products.sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
           break;
         case 'price-desc':
-          query = query.order('price', { ascending: false, nullsFirst: false });
+          products.sort((a, b) => (b.price ?? -Infinity) - (a.price ?? -Infinity));
           break;
         case 'name-asc':
-          query = query.order('name', { ascending: true });
+          products.sort((a, b) => a.name.localeCompare(b.name));
           break;
         case 'name-desc':
-          query = query.order('name', { ascending: false });
+          products.sort((a, b) => b.name.localeCompare(a.name));
           break;
         case 'newest':
-          query = query.order('created_at', { ascending: false });
+          products.sort((a, b) => b.created_at.localeCompare(a.created_at));
           break;
         default:
-          query = query.order('is_featured', { ascending: false }).order('name', { ascending: true });
+          products.sort((a, b) => {
+            if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1;
+            return a.name.localeCompare(b.name);
+          });
       }
 
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching products:', error);
-        throw error;
-      }
-
-      return (data || []) as Product[];
+      return products;
     },
   });
 }
@@ -93,17 +96,9 @@ export function useCategories() {
   return useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching categories:', error);
-        throw error;
-      }
-
-      return (data || []) as Category[];
+      const q = query(collection(db, 'categories'), orderBy('name'));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
     },
   });
 }
@@ -112,17 +107,12 @@ export function useProductCount() {
   return useQuery({
     queryKey: ['product-count'],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
-        .neq('product_type', 'variation');
-
-      if (error) {
-        console.error('Error fetching product count:', error);
-        throw error;
-      }
-
-      return count || 0;
+      const q = query(
+        collection(db, 'products'),
+        where('product_type', '!=', 'variation')
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.size;
     },
   });
 }
