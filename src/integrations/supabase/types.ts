@@ -47,6 +47,57 @@ export type Database = {
         }
         Relationships: []
       }
+      round_config_prices: {
+        Row: {
+          id: string
+          ulw_cm: number
+          material: string
+          optik: string
+          schale: number
+          hoehe_cm: number
+          daemmung_mm: number
+          luefterrahmen_variante: string
+          lichtkuppel_preis: number
+          aufsatzkranz_preis: number
+          luefterrahmen_preis: number
+          zusatzkosten: number
+          total_preis: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          ulw_cm: number
+          material: string
+          optik: string
+          schale: number
+          hoehe_cm: number
+          daemmung_mm: number
+          luefterrahmen_variante: string
+          lichtkuppel_preis?: number
+          aufsatzkranz_preis?: number
+          luefterrahmen_preis?: number
+          zusatzkosten?: number
+          total_preis?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          ulw_cm?: number
+          material?: string
+          optik?: string
+          schale?: number
+          hoehe_cm?: number
+          daemmung_mm?: number
+          luefterrahmen_variante?: string
+          lichtkuppel_preis?: number
+          aufsatzkranz_preis?: number
+          luefterrahmen_preis?: number
+          zusatzkosten?: number
+          total_preis?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
       configurator_items: {
         Row: {
           article_number: string
@@ -450,6 +501,32 @@ export type Database = {
     }
     Functions: {
       generate_order_number: { Args: never; Returns: string }
+      get_round_config_price: {
+        Args: {
+          p_ulw_cm: number
+          p_material: string
+          p_optik: string
+          p_schale: number
+          p_hoehe_cm: number
+          p_daemmung_mm: number
+          p_luefterrahmen_variante: string
+        }
+        Returns: {
+          lichtkuppel_preis: number
+          aufsatzkranz_preis: number
+          luefterrahmen_preis: number
+          zusatzkosten: number
+          total_preis: number
+        }[]
+      }
+      get_round_luefterrahmen_variants: {
+        Args: {
+          p_ulw_cm: number
+        }
+        Returns: {
+          luefterrahmen_variante: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -11,11 +11,13 @@ interface PriceBreakdown {
   lichtkuppel: number;
   kranz?: number;
   luefter: number;
+  zusatz: number;
   unitTotal: number;
   total: number;
   lichtkuppelFound: boolean;
   kranzFound?: boolean;
   luefterFound: boolean;
+  zusatzFound: boolean;
 }
 
 interface ConfigDetails {
@@ -25,6 +27,7 @@ interface ConfigDetails {
   shells: number;
   uValue: number;
   kranzHeight?: number;
+  daemmung?: number;
   luefterrahmen: string;
 }
 
@@ -89,6 +92,12 @@ export function ConfiguratorSummary({
                   <span className="font-medium">{config.kranzHeight} cm</span>
                 </div>
               )}
+              {showKranz && config.daemmung && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{language === 'de' ? 'Dämmung' : 'Insulation'}:</span>
+                  <span className="font-medium">{config.daemmung} mm</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{language === 'de' ? 'Lüfterrahmen' : 'Frame'}:</span>
                 <span className="font-medium">{config.luefterrahmen}</span>
@@ -97,7 +106,7 @@ export function ConfiguratorSummary({
 
             <Separator />
 
-            {/* Price Input Fields - Old Style */}
+            {/* Price Input Fields */}
             <div className="space-y-3">
               <div className="space-y-1">
                 <Label htmlFor="lichtkuppel-price" className="text-sm">
@@ -148,7 +157,7 @@ export function ConfiguratorSummary({
                   id="zusatz-price"
                   type="text"
                   readOnly
-                  value="0,00"
+                  value={formatPriceDisplay(prices.zusatz, prices.zusatzFound)}
                   className="bg-muted"
                 />
               </div>
@@ -183,14 +192,14 @@ export function ConfiguratorSummary({
             </div>
 
             <p className="text-xs text-muted-foreground">
-              {language === 'de' 
+              {language === 'de'
                 ? 'Alle Preise zzgl. MwSt. zzgl. Versandkosten'
                 : 'All prices excl. VAT, plus shipping'}
             </p>
 
             {/* Add to Cart */}
             {prices.lichtkuppelFound ? (
-              <Button 
+              <Button
                 onClick={onAddToCart}
                 className="w-full"
                 size="lg"
@@ -199,7 +208,7 @@ export function ConfiguratorSummary({
                 {language === 'de' ? 'In den Warenkorb' : 'Add to Cart'}
               </Button>
             ) : (
-              <Button 
+              <Button
                 variant="outline"
                 className="w-full"
                 size="lg"

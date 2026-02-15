@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useConfiguratorItems } from '@/hooks/useConfiguratorItems';
+import { useRoundConfigPrice, useRoundLuefterrahmenVariants } from '@/hooks/useRoundConfigPrice';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ export interface BaseConfigSelection {
   optik: 'klar' | 'opal';
   shells: 1 | 2 | 3 | 4 | 5;
   kranzHeight: 15 | 30 | 50;
+  daemmung: 20 | 40 | 50 | 60 | 80 | 100;
   luefterrahmen: 'festverglast' | 'spindel' | '230v' | '24v';
   quantity: number;
 }
@@ -31,18 +33,48 @@ export interface SquareConfigSelection extends BaseConfigSelection {
 }
 
 export interface RoundConfigSelection extends BaseConfigSelection {
-  diameter: 60 | 80 | 100 | 120 | 150;
+  diameter: number;
 }
 
 const SHELL_OPTIONS: (1 | 2 | 3 | 4 | 5)[] = [1, 2, 3, 4, 5];
 const KRANZ_HEIGHTS: (15 | 30 | 50)[] = [15, 30, 50];
+const DAEMMUNG_OPTIONS: (20 | 40 | 50 | 60 | 80 | 100)[] = [20, 40, 50, 60, 80, 100];
 const SQUARE_DIMENSIONS: (80 | 100 | 110 | 180)[] = [80, 100, 110, 180];
-const ROUND_DIAMETERS: (60 | 80 | 100 | 120 | 150)[] = [60, 80, 100, 120, 150];
+const ROUND_DIAMETERS: number[] = [60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 200, 210, 220];
 
 const MATERIAL_MAP: Record<BaseConfigSelection['material'], string> = {
   acryl: 'AC',
   heatstop: 'HS',
   polycarbonat: 'PC',
+};
+
+// Map UI material values to CSV material strings
+const MATERIAL_CSV_MAP: Record<BaseConfigSelection['material'], string> = {
+  acryl: 'Acryl (Standard)',
+  heatstop: 'Heatstop (wärmereflektierend)',
+  polycarbonat: 'Polycarbonat (schlagfest)',
+};
+
+// Map UI optik values to CSV optik strings
+const OPTIK_CSV_MAP: Record<BaseConfigSelection['optik'], string> = {
+  klar: 'klar (transparent)',
+  opal: 'opal (Milchglas)',
+};
+
+// Map UI luefterrahmen values to CSV luefterrahmen strings
+const LUEFTER_CSV_MAP: Record<BaseConfigSelection['luefterrahmen'], string> = {
+  festverglast: 'festverglast (nicht zu öffnen)',
+  spindel: 'manuell offenbar (Spindel)',
+  '230v': 'elektrisch offenbar (230V Antrieb)',
+  '24v': 'elektrisch offenbar (24V RWA-Antrieb)',
+};
+
+// Reverse map: CSV luefterrahmen string → UI key
+const LUEFTER_REVERSE_MAP: Record<string, BaseConfigSelection['luefterrahmen']> = {
+  'festverglast (nicht zu öffnen)': 'festverglast',
+  'manuell offenbar (Spindel)': 'spindel',
+  'elektrisch offenbar (230V Antrieb)': '230v',
+  'elektrisch offenbar (24V RWA-Antrieb)': '24v',
 };
 
 interface BaseConfiguratorProps {
@@ -56,17 +88,56 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
   const { language } = useLanguage();
   const { addItem } = useCart();
 
-  const defaultSelection = shape === 'square' 
-    ? { laenge: 100 as const, breite: 100 as const, material: 'acryl' as const, optik: 'klar' as const, shells: 2 as const, kranzHeight: 30 as const, luefterrahmen: 'festverglast' as const, quantity: 1 }
-    : { diameter: 100 as const, material: 'acryl' as const, optik: 'klar' as const, shells: 2 as const, kranzHeight: 30 as const, luefterrahmen: 'festverglast' as const, quantity: 1 };
+  const defaultSelection = shape === 'square'
+    ? { laenge: 100 as const, breite: 100 as const, material: 'acryl' as const, optik: 'klar' as const, shells: 2 as const, kranzHeight: 30 as const, daemmung: 20 as const, luefterrahmen: 'festverglast' as const, quantity: 1 }
+    : { diameter: 100, material: 'acryl' as const, optik: 'klar' as const, shells: 2 as const, kranzHeight: 30 as const, daemmung: 20 as const, luefterrahmen: 'festverglast' as const, quantity: 1 };
 
   const [selection, setSelection] = useState<SquareConfigSelection | RoundConfigSelection>(defaultSelection as any);
 
-  const { data: lichtkuppelItems, isLoading: loadingLK } = useConfiguratorItems('lichtkuppel');
-  const { data: kranzItems, isLoading: loadingKranz } = useConfiguratorItems('aufsatzkranz');
-  const { data: luefterItems, isLoading: loadingLuefter } = useConfiguratorItems('luefterrahmen');
+  // --- Square: use existing configurator_items approach ---
+  const { data: lichtkuppelItems, isLoading: loadingLK } = useConfiguratorItems(shape === 'square' ? 'lichtkuppel' : undefined);
+  const { data: kranzItems, isLoading: loadingKranz } = useConfiguratorItems(shape === 'square' ? 'aufsatzkranz' : undefined);
+  const { data: luefterItems, isLoading: loadingLuefter } = useConfiguratorItems(shape === 'square' ? 'luefterrahmen' : undefined);
 
-  const isLoading = loadingLK || loadingKranz || loadingLuefter;
+  // --- Round: use round_config_prices RPC ---
+  const diameter = shape === 'round' ? (selection as RoundConfigSelection).diameter : 0;
+
+  const roundPriceParams = useMemo(() => {
+    if (shape !== 'round') return null;
+    return {
+      ulw_cm: diameter,
+      material: MATERIAL_CSV_MAP[selection.material],
+      optik: OPTIK_CSV_MAP[selection.optik],
+      schale: selection.shells,
+      hoehe_cm: withCurb ? selection.kranzHeight : 15, // default height for dome-only
+      daemmung_mm: withCurb ? selection.daemmung : 20,  // default insulation for dome-only
+      luefterrahmen_variante: LUEFTER_CSV_MAP[selection.luefterrahmen],
+    };
+  }, [shape, diameter, selection.material, selection.optik, selection.shells, selection.kranzHeight, selection.daemmung, selection.luefterrahmen, withCurb]);
+
+  const { data: roundPrice, isLoading: loadingRoundPrice } = useRoundConfigPrice(roundPriceParams);
+  const { data: availableLuefterVariants } = useRoundLuefterrahmenVariants(diameter);
+
+  // Available luefterrahmen options for the current diameter (round only)
+  const roundLuefterOptions = useMemo(() => {
+    if (shape !== 'round' || !availableLuefterVariants) return null;
+    // Filter out "keine" — we use "festverglast" as the UI equivalent of no opening
+    return availableLuefterVariants
+      .filter((v: string) => v !== 'keine')
+      .map((csvVariant: string) => LUEFTER_REVERSE_MAP[csvVariant])
+      .filter(Boolean) as BaseConfigSelection['luefterrahmen'][];
+  }, [shape, availableLuefterVariants]);
+
+  // When diameter changes and current luefterrahmen is no longer available, reset to festverglast
+  useEffect(() => {
+    if (roundLuefterOptions && !roundLuefterOptions.includes(selection.luefterrahmen)) {
+      setSelection(s => ({ ...s, luefterrahmen: 'festverglast' }));
+    }
+  }, [roundLuefterOptions, selection.luefterrahmen]);
+
+  const isLoading = shape === 'square'
+    ? (loadingLK || loadingKranz || loadingLuefter)
+    : loadingRoundPrice;
 
   const getLaenge = () => shape === 'square' ? (selection as SquareConfigSelection).laenge : 0;
   const getBreite = () => shape === 'square' ? (selection as SquareConfigSelection).breite : 0;
@@ -81,60 +152,74 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
     return `Ø ${getDiameter()} cm`;
   };
 
+  // --- Price calculation ---
   const prices = useMemo(() => {
+    if (shape === 'round') {
+      // Round: use RPC result
+      if (!roundPrice) {
+        return {
+          lichtkuppel: 0,
+          kranz: withCurb ? 0 : undefined,
+          luefter: 0,
+          zusatz: 0,
+          unitTotal: 0,
+          total: 0,
+          lichtkuppelFound: false,
+          kranzFound: withCurb ? false : undefined,
+          luefterFound: false,
+          zusatzFound: true,
+        };
+      }
+
+      const lichtkuppelPrice = Number(roundPrice.lichtkuppel_preis) || 0;
+      const kranzPrice = withCurb ? (Number(roundPrice.aufsatzkranz_preis) || 0) : 0;
+      const luefterPrice = Number(roundPrice.luefterrahmen_preis) || 0;
+      const zusatzPrice = Number(roundPrice.zusatzkosten) || 0;
+
+      const unitTotal = lichtkuppelPrice + kranzPrice + luefterPrice + zusatzPrice;
+      const total = unitTotal * selection.quantity;
+
+      return {
+        lichtkuppel: lichtkuppelPrice,
+        kranz: withCurb ? kranzPrice : undefined,
+        luefter: luefterPrice,
+        zusatz: zusatzPrice,
+        unitTotal,
+        total,
+        lichtkuppelFound: true,
+        kranzFound: withCurb ? true : undefined,
+        luefterFound: true,
+        zusatzFound: true,
+      };
+    }
+
+    // Square: use existing configurator_items approach
     const dbMaterial = MATERIAL_MAP[selection.material];
     const laenge = getLaenge();
     const breite = getBreite();
-    const diameter = getDiameter();
 
-    // Find matching Lichtkuppel
-    let lkItem;
-    if (shape === 'square') {
-      lkItem = lichtkuppelItems?.find(item =>
-        item.width_cm === breite &&
-        item.length_cm === laenge &&
-        item.material === dbMaterial &&
-        item.shells === selection.shells
-      );
-    } else {
-      // For round, we use diameter_cm
-      lkItem = lichtkuppelItems?.find(item =>
-        item.diameter_cm === diameter &&
-        item.material === dbMaterial &&
-        item.shells === selection.shells
-      );
-    }
+    let lkItem = lichtkuppelItems?.find(item =>
+      item.width_cm === breite &&
+      item.length_cm === laenge &&
+      item.material === dbMaterial &&
+      item.shells === selection.shells
+    );
 
-    // Find matching Aufsatzkranz (only if withCurb)
     let kranzItem = null;
     if (withCurb) {
-      if (shape === 'square') {
-        kranzItem = kranzItems?.find(item =>
-          item.width_cm === breite &&
-          item.length_cm === laenge &&
-          item.height_cm === selection.kranzHeight
-        );
-      } else {
-        kranzItem = kranzItems?.find(item =>
-          item.diameter_cm === diameter &&
-          item.height_cm === selection.kranzHeight
-        );
-      }
+      kranzItem = kranzItems?.find(item =>
+        item.width_cm === breite &&
+        item.length_cm === laenge &&
+        item.height_cm === selection.kranzHeight
+      );
     }
 
-    // Find matching Lüfterrahmen
     let luefterItem = null;
     if (selection.luefterrahmen !== 'festverglast' && selection.luefterrahmen !== 'spindel') {
-      if (shape === 'square') {
-        luefterItem = luefterItems?.find(item =>
-          item.width_cm === breite &&
-          item.length_cm === laenge
-        );
-      } else {
-        luefterItem = luefterItems?.find(item =>
-          item.diameter_cm === diameter
-        );
-      }
+      luefterItem = luefterItems?.find(item =>
+        item.width_cm === breite &&
+        item.length_cm === laenge
+      );
     }
 
     const lichtkuppelPrice = lkItem?.sale_price || 0;
@@ -148,15 +233,19 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
       lichtkuppel: lichtkuppelPrice,
       kranz: withCurb ? kranzPrice : undefined,
       luefter: luefterPrice,
+      zusatz: 0,
       unitTotal,
       total,
       lichtkuppelFound: !!lkItem,
       kranzFound: withCurb ? !!kranzItem : undefined,
       luefterFound: selection.luefterrahmen === 'festverglast' || selection.luefterrahmen === 'spindel' || !!luefterItem,
+      zusatzFound: true,
     };
-  }, [selection, lichtkuppelItems, kranzItems, luefterItems, shape, withCurb, getLaenge, getBreite, getDiameter]);
+  }, [selection, roundPrice, lichtkuppelItems, kranzItems, luefterItems, shape, withCurb]);
 
-  const hasProducts = lichtkuppelItems && lichtkuppelItems.length > 0;
+  const hasProducts = shape === 'round'
+    ? !!roundPrice
+    : (lichtkuppelItems && lichtkuppelItems.length > 0);
 
   const getUValue = () => {
     const uValues: Record<number, number> = { 1: 5.0, 2: 2.7, 3: 1.7, 4: 1.3, 5: 1.0 };
@@ -197,11 +286,10 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
 
   // Convert to 3D viewer props
   const get3DViewerProps = () => {
-    // Map to the expected groesse type for viewer (use laenge for square)
-    const groesse = shape === 'square' 
+    const groesse = shape === 'square'
       ? (getLaenge() as 80 | 100 | 110 | 180)
       : (getDiameter() <= 80 ? 80 : getDiameter() <= 100 ? 100 : getDiameter() <= 110 ? 110 : 180) as 80 | 100 | 110 | 180;
-    
+
     return {
       groesse,
       material: selection.material,
@@ -215,6 +303,12 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
   };
 
   const viewerProps = get3DViewerProps();
+
+  // The luefterrahmen options to display (dynamic for round, static for square)
+  const luefterrahmenOptions: BaseConfigSelection['luefterrahmen'][] =
+    (shape === 'round' && roundLuefterOptions)
+      ? roundLuefterOptions
+      : ['festverglast', 'spindel', '230v', '24v'];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -268,14 +362,14 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Configuration Options */}
         <div className="lg:col-span-2 space-y-6">
-          
+
           {/* 1. Maße */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 {language === 'de' ? 'Maße' : 'Dimensions'}
                 <Badge variant="secondary" className="text-xs font-normal">
-                  {shape === 'round' 
+                  {shape === 'round'
                     ? (language === 'de' ? 'Durchmesser' : 'Diameter')
                     : (language === 'de' ? 'Innenlichtweite' : 'Interior Width')}
                 </Badge>
@@ -296,7 +390,6 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
                           selected={(selection as SquareConfigSelection).laenge === size}
                           onClick={() => {
                             const newSelection = { ...selection, laenge: size } as SquareConfigSelection;
-                            // If breite > laenge, adjust breite
                             if (newSelection.breite > size) {
                               newSelection.breite = size;
                             }
@@ -462,15 +555,27 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
                   </div>
                 </div>
 
-                {/* Dämmung - fest 20mm */}
+                {/* Dämmung */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">
                     {language === 'de' ? 'Dämmung' : 'Insulation'} <span className="text-destructive">*</span>
                   </Label>
                   <div className="flex flex-wrap gap-2">
-                    <OptionButton selected={true} onClick={() => {}}>
-                      20 mm
-                    </OptionButton>
+                    {shape === 'round' ? (
+                      DAEMMUNG_OPTIONS.map(d => (
+                        <OptionButton
+                          key={d}
+                          selected={selection.daemmung === d}
+                          onClick={() => setSelection(s => ({ ...s, daemmung: d }))}
+                        >
+                          {d} mm
+                        </OptionButton>
+                      ))
+                    ) : (
+                      <OptionButton selected={true} onClick={() => {}}>
+                        20 mm
+                      </OptionButton>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -493,30 +598,38 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
                   {language === 'de' ? 'Variante' : 'Variant'} <span className="text-destructive">*</span>
                 </Label>
                 <div className="flex flex-wrap gap-2">
-                  <OptionButton
-                    selected={selection.luefterrahmen === 'festverglast'}
-                    onClick={() => setSelection(s => ({ ...s, luefterrahmen: 'festverglast' }))}
-                  >
-                    festverglast ({language === 'de' ? 'nicht zu öffnen' : 'fixed'})
-                  </OptionButton>
-                  <OptionButton
-                    selected={selection.luefterrahmen === 'spindel'}
-                    onClick={() => setSelection(s => ({ ...s, luefterrahmen: 'spindel' }))}
-                  >
-                    manuell öffenbar (Spindel)
-                  </OptionButton>
-                  <OptionButton
-                    selected={selection.luefterrahmen === '230v'}
-                    onClick={() => setSelection(s => ({ ...s, luefterrahmen: '230v' }))}
-                  >
-                    elektrisch öffenbar (230V Antrieb)
-                  </OptionButton>
-                  <OptionButton
-                    selected={selection.luefterrahmen === '24v'}
-                    onClick={() => setSelection(s => ({ ...s, luefterrahmen: '24v' }))}
-                  >
-                    elektrisch öffenbar (24V RWA-Antrieb)
-                  </OptionButton>
+                  {luefterrahmenOptions.includes('festverglast') && (
+                    <OptionButton
+                      selected={selection.luefterrahmen === 'festverglast'}
+                      onClick={() => setSelection(s => ({ ...s, luefterrahmen: 'festverglast' }))}
+                    >
+                      festverglast ({language === 'de' ? 'nicht zu öffnen' : 'fixed'})
+                    </OptionButton>
+                  )}
+                  {luefterrahmenOptions.includes('spindel') && (
+                    <OptionButton
+                      selected={selection.luefterrahmen === 'spindel'}
+                      onClick={() => setSelection(s => ({ ...s, luefterrahmen: 'spindel' }))}
+                    >
+                      manuell öffenbar (Spindel)
+                    </OptionButton>
+                  )}
+                  {luefterrahmenOptions.includes('230v') && (
+                    <OptionButton
+                      selected={selection.luefterrahmen === '230v'}
+                      onClick={() => setSelection(s => ({ ...s, luefterrahmen: '230v' }))}
+                    >
+                      elektrisch öffenbar (230V Antrieb)
+                    </OptionButton>
+                  )}
+                  {luefterrahmenOptions.includes('24v') && (
+                    <OptionButton
+                      selected={selection.luefterrahmen === '24v'}
+                      onClick={() => setSelection(s => ({ ...s, luefterrahmen: '24v' }))}
+                    >
+                      elektrisch öffenbar (24V RWA-Antrieb)
+                    </OptionButton>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -533,6 +646,7 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
               shells: selection.shells,
               uValue: getUValue(),
               kranzHeight: withCurb ? selection.kranzHeight : undefined,
+              daemmung: withCurb ? selection.daemmung : undefined,
               luefterrahmen: getLuefterrahmenLabel(selection.luefterrahmen),
             }}
             prices={prices}
