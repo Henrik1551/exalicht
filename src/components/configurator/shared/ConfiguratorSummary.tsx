@@ -58,32 +58,32 @@ export function ConfiguratorSummary({
 }: ConfiguratorSummaryProps) {
   const { language } = useLanguage();
   const cardRef = useRef<HTMLDivElement>(null);
-  const [showFloating, setShowFloating] = useState(() => {
-    // Default to true on mobile-sized screens (card is below the fold)
-    return typeof window !== 'undefined' && window.innerWidth < 1024;
-  });
+  const [showFloating, setShowFloating] = useState(true);
 
   useEffect(() => {
-    const el = cardRef.current;
-    if (!el) return;
+    const checkVisibility = () => {
+      const el = cardRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+      setShowFloating(!isVisible);
+    };
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        // Show floating bar when the real card is NOT visible
-        setShowFloating(!entry.isIntersecting);
-      },
-      { threshold: 0, rootMargin: '0px' }
-    );
+    checkVisibility();
+    window.addEventListener('scroll', checkVisibility, { passive: true });
+    window.addEventListener('resize', checkVisibility, { passive: true });
 
-    observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      window.removeEventListener('scroll', checkVisibility);
+      window.removeEventListener('resize', checkVisibility);
+    };
   }, []);
 
   return (
     <>
       {/* Floating mobile price bar */}
       {showFloating && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-background border-t shadow-[0_-4px_12px_rgba(0,0,0,0.1)] px-4 py-3">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t shadow-[0_-4px_12px_rgba(0,0,0,0.1)] px-4 py-3">
           {isLoading ? (
             <div className="flex items-center justify-center">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
