@@ -58,7 +58,10 @@ export function ConfiguratorSummary({
 }: ConfiguratorSummaryProps) {
   const { language } = useLanguage();
   const cardRef = useRef<HTMLDivElement>(null);
-  const [showFloating, setShowFloating] = useState(false);
+  const [showFloating, setShowFloating] = useState(() => {
+    // Default to true on mobile-sized screens (card is below the fold)
+    return typeof window !== 'undefined' && window.innerWidth < 1024;
+  });
 
   useEffect(() => {
     const el = cardRef.current;
@@ -69,7 +72,7 @@ export function ConfiguratorSummary({
         // Show floating bar when the real card is NOT visible
         setShowFloating(!entry.isIntersecting);
       },
-      { threshold: 0.1 }
+      { threshold: 0, rootMargin: '0px' }
     );
 
     observer.observe(el);
