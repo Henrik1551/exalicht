@@ -38,7 +38,6 @@ export interface RoundConfigSelection extends BaseConfigSelection {
 
 const SHELL_OPTIONS: (1 | 2 | 3 | 4 | 5)[] = [1, 2, 3, 4, 5];
 const KRANZ_HEIGHTS: (15 | 30 | 50)[] = [15, 30, 50];
-const DAEMMUNG_OPTIONS: (20 | 40 | 50 | 60 | 80 | 100)[] = [20, 40, 50, 60, 80, 100];
 const SQUARE_DIMENSIONS: (80 | 100 | 110 | 180)[] = [80, 100, 110, 180];
 const ROUND_DIAMETERS: number[] = [60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 200, 210, 220];
 
@@ -135,18 +134,6 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
     }
   }, [roundLuefterOptions, selection.luefterrahmen]);
 
-  // Available Dämmung options depend on curb height (15cm → only 20mm)
-  const availableDaemmung = useMemo(() => {
-    if (selection.kranzHeight === 15) return [20] as (20 | 40 | 50 | 60 | 80 | 100)[];
-    return DAEMMUNG_OPTIONS;
-  }, [selection.kranzHeight]);
-
-  // When height changes and current Dämmung is no longer available, reset to 20mm
-  useEffect(() => {
-    if (!availableDaemmung.includes(selection.daemmung)) {
-      setSelection(s => ({ ...s, daemmung: 20 }));
-    }
-  }, [availableDaemmung, selection.daemmung]);
 
   const isLoading = shape === 'square'
     ? (loadingLK || loadingKranz || loadingLuefter)
@@ -568,29 +555,6 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
                   </div>
                 </div>
 
-                {/* Dämmung */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">
-                    {language === 'de' ? 'Dämmung' : 'Insulation'} <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    {shape === 'round' ? (
-                      availableDaemmung.map(d => (
-                        <OptionButton
-                          key={d}
-                          selected={selection.daemmung === d}
-                          onClick={() => setSelection(s => ({ ...s, daemmung: d }))}
-                        >
-                          {d} mm
-                        </OptionButton>
-                      ))
-                    ) : (
-                      <OptionButton selected={true} onClick={() => {}}>
-                        20 mm
-                      </OptionButton>
-                    )}
-                  </div>
-                </div>
               </CardContent>
             </Card>
           )}
@@ -659,7 +623,6 @@ export function BaseConfigurator({ shape, withCurb, titleDe, titleEn }: BaseConf
               shells: selection.shells,
               uValue: getUValue(),
               kranzHeight: withCurb ? selection.kranzHeight : undefined,
-              daemmung: withCurb ? selection.daemmung : undefined,
               luefterrahmen: getLuefterrahmenLabel(selection.luefterrahmen),
             }}
             prices={prices}

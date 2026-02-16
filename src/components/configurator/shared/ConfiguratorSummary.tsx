@@ -27,7 +27,6 @@ interface ConfigDetails {
   shells: number;
   uValue: number;
   kranzHeight?: number;
-  daemmung?: number;
   luefterrahmen: string;
 }
 
@@ -90,12 +89,6 @@ export function ConfiguratorSummary({
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{language === 'de' ? 'Aufsatzkranz' : 'Curb'}:</span>
                   <span className="font-medium">{config.kranzHeight} cm</span>
-                </div>
-              )}
-              {showKranz && config.daemmung && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{language === 'de' ? 'Dämmung' : 'Insulation'}:</span>
-                  <span className="font-medium">{config.daemmung} mm</span>
                 </div>
               )}
               <div className="flex justify-between">
